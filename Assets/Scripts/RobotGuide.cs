@@ -10,11 +10,22 @@ public class RobotGuide : MonoBehaviour
     public Transform playerCamera;
 
     public GuidedPlayer playerGuide;
+    public RobotWelcomePrompt welcome;
+    public float invitationDistance = 2.5f;
 
     public bool IsWalking { get; private set; }
     public bool HasArrived { get; private set; }
 
     bool walkPaused;
+    bool wasNearPlayer;
+    Vector3 startPosition;
+    Quaternion startRotation;
+
+    void Awake()
+    {
+        startPosition = transform.position;
+        startRotation = transform.rotation;
+    }
 
     public bool WalkTo(Transform destination)
     {
@@ -50,6 +61,37 @@ public class RobotGuide : MonoBehaviour
             if (direction.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(direction), 100f * Time.deltaTime);
         }
+    }
+
+    void LateUpdate()
+    {
+        CheckForReturningLearner();
+    }
+
+    // A dismissed invitation stays hidden until the learner leaves and returns.
+    void CheckForReturningLearner()
+    {
+        if (welcome == null || playerCamera == null) return;
+        float distance = wasNearPlayer ? invitationDistance + 0.4f : invitationDistance;
+        bool near = Vector3.ProjectOnPlane(playerCamera.position - transform.position, Vector3.up).sqrMagnitude <= distance * distance;
+        if (!near) welcome.HideTourInvitation();
+        else if (!wasNearPlayer) welcome.ShowTourInvitation();
+        wasNearPlayer = near;
+    }
+
+    public void ReturnToStart()
+    {
+        PauseWalk();
+        playerGuide?.StopFollowing();
+        playerGuide?.CancelViewTurn();
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.ResetPath();
+            agent.Warp(startPosition);
+        }
+        else transform.position = startPosition;
+        transform.rotation = startRotation;
+        IsWalking = HasArrived = false;
     }
 
     public void PauseWalk()

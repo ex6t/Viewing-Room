@@ -50,7 +50,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
         bool up = vertical > 0.6f || (Keyboard.current != null && Keyboard.current.upArrowKey.isPressed);
         bool down = vertical < -0.6f || (Keyboard.current != null && Keyboard.current.downArrowKey.isPressed);
 
-        if (modes && !previousMode && lesson.CurrentStep != ViewingRoomLesson.LessonStep.Complete) lesson.OpenModes();
+        if (modes && !previousMode && lesson.IsGuided && lesson.CurrentStep != ViewingRoomLesson.LessonStep.Complete) lesson.OpenModes();
         else if (replay && !previousReplay && lesson.IsPresenting) lesson.ReplayRecording();
         else if (confirm && !previousContinue) lesson.ContinueLesson();
         else if (select && !previousSelect) lesson.SelectAnswer();

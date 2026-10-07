@@ -3,9 +3,10 @@ using UnityEngine.InputSystem;
 using UnityEngine.XR;
 using CommonUsages = UnityEngine.XR.CommonUsages;
 
-// Welcome wording, mode selection and fresh A/X presses. Travel locking lives on the rig.
+// Welcome, free-roam instructions and tour invitations share the same tablet and A/X choices.
 public class RobotWelcomePrompt : MonoBehaviour
 {
+    enum Prompt { Welcome, FreeRoam, Invitation }
     [Header("Welcome Prompt")]
     public RobotTablet tablet;
     public Transform playerCamera;
@@ -30,6 +31,7 @@ public class RobotWelcomePrompt : MonoBehaviour
     bool headingAligned;
     bool previousUp = true;
     bool previousDown = true;
+    Prompt currentPrompt;
 
     void Start()
     {
@@ -51,6 +53,29 @@ public class RobotWelcomePrompt : MonoBehaviour
             return;
         }
 
+        ShowPrompt(Prompt.Welcome);
+    }
+
+    public void ShowFreeRoamInstructions()
+    {
+        ShowPrompt(Prompt.FreeRoam);
+    }
+
+    public void ShowTourInvitation()
+    {
+        if (IsShowing || firstLesson == null || firstLesson.IsGuided || tablet == null || tablet.gameObject.activeSelf ||
+            (firstLesson.CurrentStep != ViewingRoomLesson.LessonStep.Ready && firstLesson.CurrentStep != ViewingRoomLesson.LessonStep.Complete)) return;
+        ShowPrompt(Prompt.Invitation);
+    }
+
+    public void HideTourInvitation()
+    {
+        if (IsShowing && currentPrompt == Prompt.Invitation) ClearWelcome();
+    }
+
+    void ShowPrompt(Prompt prompt)
+    {
+        if (!isActiveAndEnabled || IsShowing) return;
         if (tablet == null || playerCamera == null || continueInput.action == null || navigationInput == null ||
             locomotion == null || locomotion.locomotionProviders == null || locomotion.locomotionProviders.Length == 0)
         {
@@ -58,7 +83,9 @@ public class RobotWelcomePrompt : MonoBehaviour
             return;
         }
 
-        PauseLocomotion();
+        currentPrompt = prompt;
+        if (prompt == Prompt.Welcome) PauseLocomotion();
+        else locomotion.Resume(); // Free roam can teleport away while reading or deciding.
 
         previousInputEnabled = continueInput.action.enabled;
         inputReady = previousInputEnabled;
@@ -103,7 +130,7 @@ public class RobotWelcomePrompt : MonoBehaviour
             if (!tracked && !Application.isEditor) return;
 
             // Align the origin once after tracking starts; never edit the tracked camera pose.
-            if (!headingAligned && locomotion.playerOrigin != null)
+            if (currentPrompt == Prompt.Welcome && !headingAligned && locomotion.playerOrigin != null)
             {
                 Vector3 towardRobot = Vector3.ProjectOnPlane(transform.position - playerCamera.position, Vector3.up);
                 if (towardRobot.sqrMagnitude > 0.01f)
@@ -111,9 +138,20 @@ public class RobotWelcomePrompt : MonoBehaviour
                 headingAligned = true;
             }
 
-            tablet.Show("ORBIT GUIDE  /  WELCOME", "Welcome to VR Orbit! Choose a guided tour with me, or explore at your own pace.",
-                "Left stick: highlight     X: select     A: show full text", true);
-            tablet.SetOptions("Guided Tour", "Free Roam");
+            if (currentPrompt == Prompt.Welcome)
+            {
+                tablet.Show("ORBIT GUIDE  /  WELCOME", "Welcome to VR Orbit! Choose a guided tour with me, or explore at your own pace.",
+                    "Left stick: highlight     X: select     A: show full text", true);
+                tablet.SetOptions("Guided Tour", "Free Roam");
+            }
+            else if (currentPrompt == Prompt.FreeRoam)
+                tablet.Show("ORBIT GUIDE  /  FREE ROAM", "Teleport freely around the room and visit the canvases to learn at your own pace.", "A: dismiss");
+            else
+            {
+                tablet.Show("ORBIT GUIDE  /  GUIDED TOUR", "Eager to learn? Take a guided tour with me.",
+                    "Left stick: highlight     X: select     A: dismiss", true);
+                tablet.SetOptions("Yes", "Not this time");
+            }
             promptPlaced = true;
         }
 
@@ -128,17 +166,23 @@ public class RobotWelcomePrompt : MonoBehaviour
         previousDown = down;
         bool select = freeRoamInput.action != null && freeRoamInput.action.IsPressed();
         bool pressed = continueInput.action.IsPressed();
-        if (pressed && !previousContinue && tablet.IsTyping)
+        if (pressed && !previousContinue)
         {
-            tablet.RevealText();
+            if (currentPrompt != Prompt.Welcome) ClearWelcome();
+            else if (tablet.IsTyping) tablet.RevealText();
         }
-        else if (select && !previousSelect)
+        else if (select && !previousSelect && currentPrompt != Prompt.FreeRoam)
         {
+            bool choosingMode = currentPrompt == Prompt.Welcome;
             ClearWelcome();
             if (firstLesson != null)
             {
-                if (SelectedMode == 1) firstLesson.ChooseFreeRoam();
-                else firstLesson.StartGuidedTour();
+                if (SelectedMode == 0) firstLesson.StartGuidedTour();
+                else if (choosingMode)
+                {
+                    firstLesson.ChooseFreeRoam();
+                    ShowFreeRoamInstructions();
+                }
             }
         }
         previousContinue = pressed;
@@ -156,7 +200,7 @@ public class RobotWelcomePrompt : MonoBehaviour
         if (!IsShowing) return;
         IsShowing = false;
         InputSystem.onAfterUpdate -= OnInputUpdated;
-        tablet?.Hide();
+        if (tablet != null) tablet.Hide();
 
         ResumeLocomotion();
         if (!previousInputEnabled) continueInput.action.Disable();

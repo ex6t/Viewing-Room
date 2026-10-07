@@ -71,7 +71,15 @@ public class ViewingRoomLesson : MonoBehaviour
             RefreshScreen();
         }
         bool near = IsNearScreen();
-        if (near != wasNear) { wasNear = near; RefreshScreen(); }
+        if (near != wasNear)
+        {
+            wasNear = near;
+            // Visiting a canvas in free roam never sends the robot away from its welcome spot.
+            if (!IsGuided && CurrentStep == LessonStep.Ready && near) CurrentStep = LessonStep.Introduction;
+            else if (!IsGuided && CurrentStep == LessonStep.Introduction && !near) CurrentStep = LessonStep.Ready;
+            controls.ResetInput();
+            RefreshScreen();
+        }
         controls.ReadInput();
     }
 
@@ -90,13 +98,13 @@ public class ViewingRoomLesson : MonoBehaviour
     public void ChooseFreeRoam()
     {
         IsGuided = false;
-        robotGuide.playerGuide.StopFollowing();
-        if (CurrentStep == LessonStep.Walking)
-        {
-            robotGuide.PauseWalk();
-            CurrentStep = LessonStep.Ready;
-        }
-        ResumeLesson();
+        robotGuide.ReturnToStart();
+        display.Stop();
+        CurrentStep = LessonStep.Ready;
+        wasNear = false;
+        welcome.ResumeLocomotion();
+        controls.ResetInput();
+        RefreshScreen();
     }
 
     void ResumeLesson()
@@ -111,6 +119,13 @@ public class ViewingRoomLesson : MonoBehaviour
     void BeginLesson()
     {
         completionDismissed = false;
+        if (!IsGuided)
+        {
+            CurrentStep = LessonStep.Introduction;
+            controls.ResetInput();
+            RefreshScreen();
+            return;
+        }
         if (IsGuided && !robotGuide.playerGuide.StartFollowing())
         {
             IsGuided = false;
@@ -207,12 +222,13 @@ public class ViewingRoomLesson : MonoBehaviour
         switch (CurrentStep)
         {
             case LessonStep.Ready:
-                tablet.Show("ORBIT GUIDE  /  FREE ROAM", "Explore using trigger teleport and right-stick snap turns. Come to the orbit display when you're ready to learn.", "Near display: A to ask your guide");
+                tablet.Hide(); // The welcome script shows the free-roam instructions only once.
                 break;
             case LessonStep.Walking:
                 tablet.Show("ORBIT GUIDE  /  LET'S GO", IsGuided ? "I'll take you to our first display. Look around as we travel together." : "Follow me to the orbit display using teleport. I'll introduce it when I arrive.", "A: show full text");
                 break;
             case LessonStep.Introduction:
+                if (!IsGuided && !IsNearScreen()) { tablet.Hide(); break; }
                 tablet.Show("ORBIT GUIDE  /  ORBIT SHAPE", "This canvas compares a circle with an ellipse. Let's look closer and listen to what eccentricity tells us about an orbit.", IsNearScreen() ? "A: view and listen" : "Teleport closer, then press A");
                 break;
             case LessonStep.Listening:

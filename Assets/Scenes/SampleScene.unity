@@ -6742,6 +6742,8 @@ MonoBehaviour:
   animator: {fileID: 1120300966}
   playerCamera: {fileID: 1548627037}
   playerGuide: {fileID: 4806893503058241473}
+  welcome: {fileID: 4806893503058241464}
+  invitationDistance: 2.5
 --- !u!114 &4806893503058241473
 MonoBehaviour:
   m_ObjectHideFlags: 0
