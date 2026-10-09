@@ -225,7 +225,7 @@ public class ViewingRoomLesson : MonoBehaviour
                 tablet.Hide(); // The welcome script shows the free-roam instructions only once.
                 break;
             case LessonStep.Walking:
-                tablet.Show("ORBIT GUIDE  /  LET'S GO", IsGuided ? "I'll take you to our first display. Look around as we travel together." : "Follow me to the orbit display using teleport. I'll introduce it when I arrive.", "A: show full text");
+                tablet.Show("ORBIT GUIDE  /  LET'S GO", IsGuided ? "I'll take you to our first few lessons before boarding the Hub Station." : "Follow me to the orbit display using teleport. I'll introduce it when I arrive.", "A: show full text");
                 break;
             case LessonStep.Introduction:
                 if (!IsGuided && !IsNearScreen()) { tablet.Hide(); break; }
@@ -244,7 +244,7 @@ public class ViewingRoomLesson : MonoBehaviour
                 break;
             case LessonStep.Complete:
                 if (completionDismissed) tablet.Hide();
-                else tablet.Show("ORBIT GUIDE  /  MODULE COMPLETE", "Nice work! You've completed the eccentricity module.", "A: dismiss");
+                else tablet.Show("ORBIT GUIDE  /  MODULE COMPLETE", "Nice work! You've completed the eccentricity module. More coming soon!", "A: dismiss");
                 break;
         }
     }
