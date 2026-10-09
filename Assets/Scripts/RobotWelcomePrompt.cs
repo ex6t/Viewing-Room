@@ -140,12 +140,12 @@ public class RobotWelcomePrompt : MonoBehaviour
 
             if (currentPrompt == Prompt.Welcome)
             {
-                tablet.Show("ORBIT GUIDE  /  WELCOME", "Welcome to VR Orbit! Choose a guided tour with me, or explore at your own pace.",
+                tablet.Show("ORBIT GUIDE  /  WELCOME", "Welcome to VR Orbit! I'll introduce each model and its controls on our guided tour. You set the pace. You can also revisit the room freely.",
                     "Left stick: highlight     X: select     A: show full text", true);
                 tablet.SetOptions("Guided Tour", "Free Roam");
             }
             else if (currentPrompt == Prompt.FreeRoam)
-                tablet.Show("ORBIT GUIDE  /  FREE ROAM", "Teleport freely around the room and visit the canvases to learn at your own pace.", "A: dismiss");
+                tablet.Show("ORBIT GUIDE  /  FREE ROAM", "Use either trigger to teleport and the right stick to snap turn. Return to me for the guided tour, or visit the orbit display to try its controls.", "A: dismiss");
             else
             {
                 tablet.Show("ORBIT GUIDE  /  GUIDED TOUR", "Eager to learn? Take a guided tour with me.",

@@ -1,9 +1,9 @@
 using UnityEngine;
 
-// Chooses the lesson stage. Input, display/audio, travel and tablet each have their own script.
+// Owns the stop's flow. Input, model, display, travel and tablet each keep their own role.
 public class ViewingRoomLesson : MonoBehaviour
 {
-    public enum LessonStep { Ready, Walking, Introduction, Listening, Question, Reflection, Complete }
+    public enum LessonStep { Ready, Route, Walking, Introduction, ExploreTime, ExploreShape, Reflection, NextStop, Complete }
 
     public RobotWelcomePrompt welcome;
     public RobotGuide robotGuide;
@@ -11,20 +11,20 @@ public class ViewingRoomLesson : MonoBehaviour
     public Transform lessonPoint;
     public ViewingRoomLessonInput controls;
     public ViewingRoomDisplay display;
+    public OrbitLearningModel model;
     public float activationDistance = 4.5f;
 
     public bool IsGuided { get; private set; }
     public bool HasVisited { get; private set; }
     public bool IsPresenting => display != null && display.IsOpen;
     public LessonStep CurrentStep { get; private set; }
-    public int SelectedAnswer { get; private set; }
-    public bool KeepsLocomotionPaused => IsPresenting || (IsGuided &&
-        (CurrentStep == LessonStep.Walking || CurrentStep == LessonStep.Introduction));
+    public bool KeepsLocomotionPaused => IsPresenting || (IsGuided && CurrentStep != LessonStep.Ready && CurrentStep != LessonStep.Complete);
 
     bool wasNear;
-    bool choseEllipse;
     bool started;
     bool completionDismissed;
+    bool hasResume;
+    LessonStep resumeStep = LessonStep.Introduction;
 
     void OnEnable()
     {
@@ -34,7 +34,7 @@ public class ViewingRoomLesson : MonoBehaviour
 
     void Start()
     {
-        if (welcome == null || robotGuide == null || tablet == null || lessonPoint == null ||
+        if (welcome == null || robotGuide == null || tablet == null || lessonPoint == null || model == null ||
             controls == null || display == null || robotGuide.playerGuide == null || display.playerCamera == null ||
             display.recordingPlayer == null || display.recording == null || !controls.IsConfigured)
         {
@@ -48,167 +48,178 @@ public class ViewingRoomLesson : MonoBehaviour
 
     void Update()
     {
+        if (!started) return;
         if (welcome.IsShowing) { controls.ResetInput(); return; }
-        if (display.IsPaused) ResumeLesson();
         if (CurrentStep == LessonStep.Walking && robotGuide.HasArrived && robotGuide.playerGuide.PlayerHasArrived)
         {
             robotGuide.playerGuide.StopFollowing();
-            if (IsGuided)
-            {
-                welcome.PauseLocomotion();
-                robotGuide.playerGuide.FaceDisplay(display.transform);
-            }
-            CurrentStep = LessonStep.Introduction;
-            controls.ResetInput();
-            RefreshScreen();
+            robotGuide.playerGuide.FaceDisplay(display.transform);
+            SetStep(LessonStep.Introduction);
         }
         if (robotGuide.playerGuide.IsFacingDisplay || display.IsMoving) { controls.ResetInput(); return; }
-        if (CurrentStep == LessonStep.Listening && !display.recordingPlayer.isPlaying)
-        {
-            CurrentStep = LessonStep.Question;
-            SelectedAnswer = 0;
-            controls.ResetInput();
-            RefreshScreen();
-        }
         bool near = IsNearScreen();
         if (near != wasNear)
         {
             wasNear = near;
-            // Visiting a canvas in free roam never sends the robot away from its welcome spot.
-            if (!IsGuided && CurrentStep == LessonStep.Ready && near) CurrentStep = LessonStep.Introduction;
-            else if (!IsGuided && CurrentStep == LessonStep.Introduction && !near) CurrentStep = LessonStep.Ready;
-            controls.ResetInput();
-            RefreshScreen();
+            if (!IsGuided && CurrentStep == LessonStep.Ready && near) SetStep(LessonStep.Introduction);
+            else if (!IsGuided && CurrentStep == LessonStep.Introduction && !near) SetStep(LessonStep.Ready);
         }
         controls.ReadInput();
     }
 
     public void StartGuidedTour()
     {
+        bool wasGuided = IsGuided;
         IsGuided = true;
-        if (CurrentStep == LessonStep.Ready || CurrentStep == LessonStep.Complete) BeginLesson();
+        if (CurrentStep == LessonStep.Ready || CurrentStep == LessonStep.Complete ||
+            (!wasGuided && !IsPresenting && !display.IsPaused))
+            SetStep(LessonStep.Route);
         else if (CurrentStep == LessonStep.Walking)
         {
             if (!robotGuide.playerGuide.StartFollowing()) { ChooseFreeRoam(); return; }
             robotGuide.ResumeWalk();
         }
-        ResumeLesson();
+        display.Resume();
+        model.SetSuspended(!IsPresenting);
+        UpdateLocomotion();
+        controls.ResetInput();
+        RefreshScreen();
     }
 
     public void ChooseFreeRoam()
     {
+        if ((IsPresenting || display.IsPaused) && CurrentStep != LessonStep.NextStop)
+        {
+            resumeStep = CurrentStep;
+            hasResume = true;
+        }
         IsGuided = false;
         robotGuide.ReturnToStart();
+        model.SetSuspended(true);
         display.Stop();
-        CurrentStep = LessonStep.Ready;
         wasNear = false;
-        welcome.ResumeLocomotion();
-        controls.ResetInput();
-        RefreshScreen();
-    }
-
-    void ResumeLesson()
-    {
-        display.Resume();
-        if (KeepsLocomotionPaused) welcome.PauseLocomotion(IsGuided && CurrentStep == LessonStep.Walking);
-        else welcome.ResumeLocomotion();
-        controls.ResetInput();
-        RefreshScreen();
+        SetStep(LessonStep.Ready);
     }
 
     void BeginLesson()
     {
         completionDismissed = false;
-        if (!IsGuided)
+        if (!robotGuide.playerGuide.StartFollowing())
         {
-            CurrentStep = LessonStep.Introduction;
-            controls.ResetInput();
-            RefreshScreen();
+            ChooseFreeRoam();
+            tablet.Show("ORBIT GUIDE", "Teleport onto the room floor, then choose Guided Tour again.", "A: show full text");
             return;
         }
-        if (IsGuided && !robotGuide.playerGuide.StartFollowing())
+        if (!robotGuide.WalkTo(lessonPoint))
         {
-            IsGuided = false;
-            welcome.ResumeLocomotion();
-            tablet.Show("ORBIT GUIDE", "Please teleport onto the room floor, then choose Guided Tour again.", "");
+            ChooseFreeRoam();
             return;
         }
-        if (!robotGuide.WalkTo(lessonPoint)) { robotGuide.playerGuide.StopFollowing(); return; }
-        CurrentStep = LessonStep.Walking;
-        if (IsGuided) welcome.PauseLocomotion(true);
-        controls.ResetInput();
-        RefreshScreen();
+        SetStep(LessonStep.Walking);
     }
 
-    // A reveals a sentence first; a separate press continues or dismisses it.
+    // A reveals text first. The learner decides when to advance; no answer gates or timer.
     public void ContinueLesson()
     {
-        if (tablet.IsTyping) tablet.RevealText();
-        else if (CurrentStep == LessonStep.Ready && IsNearScreen()) BeginLesson();
-        else if (CurrentStep == LessonStep.Introduction && IsNearScreen()) BeginPresentation();
-        else if (CurrentStep == LessonStep.Reflection) FinishLesson();
-        else if (CurrentStep == LessonStep.Complete)
+        if (welcome.IsShowing || display.IsMoving || robotGuide.playerGuide.IsFacingDisplay) return;
+        if (tablet.IsTyping) { tablet.RevealText(); return; }
+        switch (CurrentStep)
         {
-            completionDismissed = true;
-            tablet.Hide();
+            case LessonStep.Route: BeginLesson(); break;
+            case LessonStep.Ready:
+            case LessonStep.Introduction:
+                if (IsNearScreen()) BeginPresentation();
+                break;
+            case LessonStep.ExploreTime: SetStep(LessonStep.ExploreShape); break;
+            case LessonStep.ExploreShape: SetStep(LessonStep.Reflection); break;
+            case LessonStep.Reflection: FinishLesson(); break;
+            case LessonStep.NextStop:
+                hasResume = false;
+                model.ResetModel();
+                SetStep(LessonStep.ExploreTime);
+                break;
+            case LessonStep.Complete:
+                completionDismissed = true;
+                tablet.Hide();
+                break;
         }
     }
 
     public void BeginPresentation()
     {
-        if (CurrentStep != LessonStep.Introduction && CurrentStep != LessonStep.Complete) return;
-        welcome.PauseLocomotion();
-        CurrentStep = LessonStep.Listening;
-        tablet.Hide();
-        display.Open();
-        controls.ResetInput();
+        if (CurrentStep != LessonStep.Introduction) return;
+        display.Open(false);
+        model.SetSuspended(false);
+        SetStep(hasResume ? resumeStep : LessonStep.ExploreTime);
+        hasResume = false;
     }
 
-    public void SelectAnswer()
+    public void Interact()
     {
-        if (CurrentStep != LessonStep.Question) return;
-        choseEllipse = SelectedAnswer == 1;
-        CurrentStep = LessonStep.Reflection;
-        RefreshScreen();
+        if (CurrentStep == LessonStep.ExploreTime) model.TogglePause();
+        else if (CurrentStep == LessonStep.ExploreShape) model.CompareShapes();
+        else if (CurrentStep == LessonStep.NextStop) ReturnToRoom();
     }
 
-    public void HighlightAnswer(int direction)
+    public void AdjustModel(int direction)
     {
-        if (CurrentStep != LessonStep.Question || welcome.IsShowing) return;
-        SelectedAnswer = Mathf.Clamp(SelectedAnswer + direction, 0, 1);
-        tablet.SelectAnswer(SelectedAnswer);
+        if (CurrentStep == LessonStep.ExploreTime) model.ChangeSpeed(direction);
+        else if (CurrentStep == LessonStep.ExploreShape) model.ChangeShape(direction);
+    }
+
+    public void ResetOrGoBack()
+    {
+        if (CurrentStep == LessonStep.ExploreTime || CurrentStep == LessonStep.ExploreShape) model.ResetModel();
+        else if (CurrentStep == LessonStep.Reflection) SetStep(LessonStep.ExploreShape);
+        else if (CurrentStep == LessonStep.Route) ChooseFreeRoam();
     }
 
     public void ReplayRecording()
     {
-        // B keeps the question/feedback visible; only the first listen hides the tablet.
         display.PlayRecording();
     }
 
     public void FinishLesson()
     {
         if (CurrentStep != LessonStep.Reflection) return;
-        if (choseEllipse)
-        {
-            HasVisited = true;
-            CurrentStep = LessonStep.Complete;
-            completionDismissed = false;
-            display.Stop();
-            welcome.ResumeLocomotion();
-        }
-        else { CurrentStep = LessonStep.Question; SelectedAnswer = 0; }
-        controls.ResetInput();
-        RefreshScreen();
+        HasVisited = true;
+        SetStep(LessonStep.NextStop);
+    }
+
+    public void ReturnToRoom()
+    {
+        hasResume = false;
+        IsGuided = false;
+        model.SetSuspended(true);
+        display.Stop();
+        robotGuide.ReturnToStart();
+        completionDismissed = false;
+        SetStep(LessonStep.Complete);
     }
 
     public void OpenModes()
     {
         robotGuide.playerGuide.CancelViewTurn();
         robotGuide.PauseWalk();
+        model.SetSuspended(true);
         display.Pause();
         tablet.Hide();
         welcome.ShowWelcome();
         controls.ResetInput();
+    }
+
+    void SetStep(LessonStep step)
+    {
+        CurrentStep = step;
+        UpdateLocomotion();
+        controls.ResetInput();
+        RefreshScreen();
+    }
+
+    void UpdateLocomotion()
+    {
+        if (KeepsLocomotionPaused) welcome.PauseLocomotion(CurrentStep == LessonStep.Walking);
+        else welcome.ResumeLocomotion();
     }
 
     bool IsNearScreen()
@@ -221,30 +232,31 @@ public class ViewingRoomLesson : MonoBehaviour
         if (welcome.IsShowing) return;
         switch (CurrentStep)
         {
-            case LessonStep.Ready:
-                tablet.Hide(); // The welcome script shows the free-roam instructions only once.
+            case LessonStep.Ready: tablet.Hide(); break;
+            case LessonStep.Route:
+                tablet.Show("OUR TOUR  /  YOU SET THE PACE", "Orbit controls -> Planet gallery -> Kepler's laws -> Earth and seasons -> Habitable zone -> Our changing Sun.\nFirst, we'll try a model together. Pause, revisit or return to the room whenever you need.", "A: ready to travel     B: stay in the room     Y: modes");
                 break;
             case LessonStep.Walking:
-                tablet.Show("ORBIT GUIDE  /  LET'S GO", IsGuided ? "I'll take you to our first few lessons before boarding the Hub Station." : "Follow me to the orbit display using teleport. I'll introduce it when I arrive.", "A: show full text");
+                tablet.Show("01  /  ORBIT OBSERVATORY", "We're going to the orbit display. We'll try time and shape controls here before boarding the Hub Station for the planet gallery.", "Right stick: snap turn     Y: pause / modes");
                 break;
             case LessonStep.Introduction:
-                if (!IsGuided && !IsNearScreen()) { tablet.Hide(); break; }
-                tablet.Show("ORBIT GUIDE  /  ORBIT SHAPE", "This canvas compares a circle with an ellipse. Let's look closer and listen to what eccentricity tells us about an orbit.", IsNearScreen() ? "A: view and listen" : "Teleport closer, then press A");
+                tablet.Show("01  /  TAKE TIME INTO YOUR HANDS", hasResume ? "Welcome back. Your model settings are saved. Let's continue where you paused." : "Watch the planet travel around the Sun. You'll control its motion, then change the shape of its path. This is an illustrative model, with scaled sizes and time.", IsNearScreen() ? "A: open the model     Y: modes" : "Teleport closer, then press A");
                 break;
-            case LessonStep.Listening:
-                tablet.Hide();
+            case LessonStep.ExploreTime:
+                tablet.Show("01  /  CONTROL TIME", "Press X to freeze the planet. Press again to let it move. Move the left stick left or right to change playback speed. The path stays the same; only the pace changes.", "X: pause / play   Stick left/right: speed\nB: reset   A: orbit shape   Y: modes\nRight stick click: optional narration");
                 break;
-            case LessonStep.Question:
-                tablet.Show("ORBIT GUIDE  /  QUICK CHECK", "Which orbit has greater eccentricity?", "Left stick: highlight     X: select     B: listen again", true);
-                tablet.SetOptions("Orbit A  -  Circle", "Orbit B  -  Ellipse");
-                tablet.SelectAnswer(SelectedAnswer);
+            case LessonStep.ExploreShape:
+                tablet.Show("01  /  SHAPE THE ORBIT", "Press X to compare a circle and a stretched ellipse. Use the left stick left or right for smaller changes. The dots mark equal time steps: wider gaps show faster motion. Watch the Sun stay at one focus.", "X: circle / ellipse   Stick left/right: shape\nB: reset   A: explanation   Y: modes\nRight stick click: optional narration");
                 break;
             case LessonStep.Reflection:
-                tablet.Show("ORBIT GUIDE  /  " + (choseEllipse ? "CORRECT!" : "TRY AGAIN"), choseEllipse ? "Exactly! Orbit B is more stretched. A circle has zero eccentricity." : "A circle has zero eccentricity. Look for the more stretched orbit, then try again.", choseEllipse ? "A: finish and return to the room     B: listen again" : "A: retry the question     B: listen again");
+                tablet.Show("01  /  WHAT THE MODEL REVEALS", "A circle has eccentricity zero. Increasing it stretches the ellipse. The Sun sits at one focus. With equal time steps, the planet travels farther near the Sun. We'll explore these relationships through Kepler's laws later.", "B: explore again     A: what's next     Y: modes\nRight stick click: optional narration");
+                break;
+            case LessonStep.NextStop:
+                tablet.Show("NEXT  /  MEET THE PLANETS", "Our next destination is the planet gallery aboard the Hub Station. We'll compare the worlds in this system before exploring why their orbits differ.\nYou've reached the end of today's first-stop prototype.", "A: revisit this model     X: return to the room     Y: modes");
                 break;
             case LessonStep.Complete:
                 if (completionDismissed) tablet.Hide();
-                else tablet.Show("ORBIT GUIDE  /  MODULE COMPLETE", "Nice work! You've completed the eccentricity module. More coming soon!", "A: dismiss");
+                else tablet.Show("01  /  BACK IN THE ROOM", "You can explore the room or return to me to revisit the model. There is no score or time limit.", "A: dismiss     Triggers: teleport     Right stick: snap turn");
                 break;
         }
     }
@@ -255,8 +267,8 @@ public class ViewingRoomLesson : MonoBehaviour
         robotGuide?.PauseWalk();
         robotGuide?.playerGuide?.StopFollowing();
         IsGuided = false;
-        if (IsPresenting || (display != null && display.IsPaused)) CurrentStep = LessonStep.Introduction;
-        else if (CurrentStep == LessonStep.Walking) CurrentStep = LessonStep.Ready;
+        CurrentStep = LessonStep.Ready;
+        model?.SetSuspended(true);
         if (started) display.Stop();
         welcome?.ResumeLocomotion();
         if (tablet != null && (welcome == null || !welcome.IsShowing)) tablet.Hide();
