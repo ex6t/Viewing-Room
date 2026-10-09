@@ -145,7 +145,7 @@ public class RobotWelcomePrompt : MonoBehaviour
                 tablet.SetOptions("Guided Tour", "Free Roam");
             }
             else if (currentPrompt == Prompt.FreeRoam)
-                tablet.Show("ORBIT GUIDE  /  FREE ROAM", "Use either trigger to teleport and the right stick to snap turn. Return to me for the guided tour, or visit the orbit display to try its controls.", "A: dismiss");
+                tablet.Show("ORBIT GUIDE  /  FREE ROAM", "Use either trigger to teleport and the right stick to snap turn. Return to me for the guided tour, or visit the central model to try its controls.", "A: dismiss");
             else
             {
                 tablet.Show("ORBIT GUIDE  /  GUIDED TOUR", "Eager to learn? Take a guided tour with me.",
