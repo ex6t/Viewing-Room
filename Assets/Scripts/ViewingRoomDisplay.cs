@@ -20,6 +20,7 @@ public class ViewingRoomDisplay : MonoBehaviour
     Vector3 wallScale;
     Coroutine transition;
     bool pausedFirstListen;
+    bool narrationOnOpen;
 
     void Awake()
     {
@@ -28,13 +29,15 @@ public class ViewingRoomDisplay : MonoBehaviour
         wallScale = transform.localScale;
     }
 
-    public void Open()
+    public void Open(bool playNarration = true)
     {
+        if (transition != null) StopCoroutine(transition);
         IsOpen = true;
-        transition = StartCoroutine(BringCloser());
+        narrationOnOpen = playNarration;
+        transition = StartCoroutine(BringCloser(playNarration));
     }
 
-    IEnumerator BringCloser()
+    IEnumerator BringCloser(bool playNarration)
     {
         Vector3 startPosition = transform.position;
         Quaternion startRotation = transform.rotation;
@@ -52,7 +55,7 @@ public class ViewingRoomDisplay : MonoBehaviour
         transform.SetPositionAndRotation(targetPosition, targetRotation);
         transform.localScale = Vector3.one * presentationScale;
         transition = null;
-        PlayRecording();
+        if (playNarration) PlayRecording();
     }
 
     Vector3 ReadingDirection()
@@ -81,7 +84,7 @@ public class ViewingRoomDisplay : MonoBehaviour
     public void Pause()
     {
         IsPaused = IsOpen;
-        pausedFirstListen = IsMoving;
+        pausedFirstListen = IsMoving && narrationOnOpen;
         recordingPlayer.Pause();
         Close();
     }

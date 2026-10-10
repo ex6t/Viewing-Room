@@ -5,27 +5,30 @@ using UnityEngine.InputSystem;
 public class ViewingRoomLessonInput : MonoBehaviour
 {
     public ViewingRoomLesson lesson;
+    public ObservatoryTour observatoryTour;
     public InputActionProperty continueInput; // A / Return
-    public InputActionProperty selectInput; // X
-    public InputActionProperty replayInput; // B / R
-    public InputActionProperty modeInput; // Existing Y / M shortcut, not shown in prompts.
-    public InputActionReference navigationInput; // Left stick; arrow keys in Editor.
+    public InputActionProperty selectInput; // X: pause / play.
+    public InputActionProperty replayInput; // B: reset time / go back.
+    public InputActionProperty narrationInput; // Retained binding for the later Kepler recording.
+    public InputActionProperty modeInput; // Y / M: pause and choose a mode.
+    public InputActionReference navigationInput; // Left stick: time; left/right arrows in Editor.
 
-    public bool IsConfigured => lesson != null && continueInput.action != null && selectInput.action != null &&
-        replayInput.action != null && modeInput.action != null && navigationInput != null;
+    public bool IsConfigured => (lesson != null || observatoryTour != null) && continueInput.action != null && selectInput.action != null &&
+        replayInput.action != null && narrationInput.action != null && modeInput.action != null && navigationInput != null;
 
     bool previousContinue = true;
     bool previousSelect = true;
     bool previousReplay = true;
     bool previousMode = true;
-    bool previousUp = true;
-    bool previousDown = true;
+    bool previousLeft = true;
+    bool previousRight = true;
 
     public void EnableInput()
     {
         continueInput.action?.Enable();
         selectInput.action?.Enable();
         replayInput.action?.Enable();
+        narrationInput.action?.Enable();
         modeInput.action?.Enable();
         ResetInput();
     }
@@ -35,6 +38,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
         continueInput.action?.Disable();
         selectInput.action?.Disable();
         replayInput.action?.Disable();
+        narrationInput.action?.Disable();
         modeInput.action?.Disable();
     }
 
@@ -46,29 +50,48 @@ public class ViewingRoomLessonInput : MonoBehaviour
         bool select = selectInput.action.IsPressed();
         bool replay = replayInput.action.IsPressed();
         bool modes = modeInput.action.IsPressed();
-        float vertical = navigationInput.action.ReadValue<Vector2>().y;
-        bool up = vertical > 0.6f || (Keyboard.current != null && Keyboard.current.upArrowKey.isPressed);
-        bool down = vertical < -0.6f || (Keyboard.current != null && Keyboard.current.downArrowKey.isPressed);
+        float horizontal = navigationInput.action.ReadValue<Vector2>().x;
+        bool left = horizontal < -0.6f || (Keyboard.current != null && Keyboard.current.leftArrowKey.isPressed);
+        bool right = horizontal > 0.6f || (Keyboard.current != null && Keyboard.current.rightArrowKey.isPressed);
 
-        if (modes && !previousMode && lesson.IsGuided && lesson.CurrentStep != ViewingRoomLesson.LessonStep.Complete) lesson.OpenModes();
-        else if (replay && !previousReplay && lesson.IsPresenting) lesson.ReplayRecording();
+        if (observatoryTour != null)
+        {
+            if (modes && !previousMode) observatoryTour.OpenModes();
+            else if (replay && !previousReplay) observatoryTour.ResetOrGoBack();
+            else if (confirm && !previousContinue) observatoryTour.ContinueLesson();
+            else if (select && !previousSelect) observatoryTour.Interact();
+        }
+        else if (modes && !previousMode && lesson.CurrentStep != ViewingRoomLesson.LessonStep.Ready) lesson.OpenModes();
+        else if (replay && !previousReplay) lesson.ResetOrGoBack();
         else if (confirm && !previousContinue) lesson.ContinueLesson();
-        else if (select && !previousSelect) lesson.SelectAnswer();
-        if (up && !previousUp) lesson.HighlightAnswer(-1);
-        if (down && !previousDown) lesson.HighlightAnswer(1);
+        else if (select && !previousSelect) lesson.Interact();
+        else if (left && !previousLeft) lesson.AdjustModel(-1);
+        else if (right && !previousRight) lesson.AdjustModel(1);
 
         previousContinue = confirm;
         previousSelect = select;
         previousReplay = replay;
         previousMode = modes;
-        previousUp = up;
-        previousDown = down;
+        previousLeft = left;
+        previousRight = right;
+    }
+
+    public float ReadTimeDirection()
+    {
+        if (!isActiveAndEnabled || navigationInput == null) return 0f;
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.leftArrowKey.isPressed) return -1f;
+            if (Keyboard.current.rightArrowKey.isPressed) return 1f;
+        }
+        float horizontal = navigationInput.action.ReadValue<Vector2>().x;
+        return Mathf.Abs(horizontal) > 0.25f ? horizontal : 0f;
     }
 
     // A held button cannot also advance the next prompt. Release it, then press again.
     public void ResetInput()
     {
-        previousContinue = previousSelect = previousReplay = previousMode = previousUp = previousDown = true;
+        previousContinue = previousSelect = previousReplay = previousMode = previousLeft = previousRight = true;
     }
 
     void OnDisable()
@@ -81,6 +104,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
         if (continueInput.reference == null) continueInput.action?.Dispose();
         if (selectInput.reference == null) selectInput.action?.Dispose();
         if (replayInput.reference == null) replayInput.action?.Dispose();
+        if (narrationInput.reference == null) narrationInput.action?.Dispose();
         if (modeInput.reference == null) modeInput.action?.Dispose();
     }
 }
