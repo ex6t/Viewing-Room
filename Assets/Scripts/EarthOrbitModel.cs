@@ -14,6 +14,7 @@ public class EarthOrbitModel : MonoBehaviour
     public Transform playerCamera;
     public float metresPerAU = 1.4f;
     public float daysPerSecond = 12f;
+    public float earthLabelHeight = 0.24f;
 
     // Same reference period and semi-major axis as the inherited research example (Program.cs).
     public const int ReferenceYear = 2000;
@@ -28,20 +29,26 @@ public class EarthOrbitModel : MonoBehaviour
     readonly float[] speeds = { 0.25f, 0.5f, 1f, 2f, 4f };
     int speedIndex = 2;
     double nextReadout;
+    bool initialized;
 
-    void Awake()
+    void Awake() { InitializeModel(); }
+
+    public bool InitializeModel()
     {
+        if (initialized) return true;
         if (orbitPlane == null || earth == null || sun == null || orbitPath == null || readout == null || earthLabel == null ||
             playerCamera == null || metresPerAU <= 0f || daysPerSecond <= 0f)
         {
             Debug.LogError("[EarthOrbitModel] Assign the model references and positive display settings.", this);
             enabled = false;
-            return;
+            return false;
         }
         Bergers.BergerSol.CalculateOrbitalParameters(ReferenceYear, out double eccentricity, out _, out _);
         Eccentricity = eccentricity;
+        initialized = true;
         DrawOrbit();
         ResetModel();
+        return true;
     }
 
     void Update()
@@ -66,6 +73,19 @@ public class EarthOrbitModel : MonoBehaviour
     }
 
     public void SetSuspended(bool suspended) { IsSuspended = suspended; }
+
+    // External observers own the full clock; this exhibit only needs one orbital revolution.
+    public void SetElapsedDays(double days)
+    {
+        if (double.IsNaN(days) || double.IsInfinity(days) || !InitializeModel()) return;
+        ElapsedDays = ((days % PeriodDays) + PeriodDays) % PeriodDays;
+        UpdatePosition();
+        if (readout.gameObject.activeInHierarchy && Time.unscaledTimeAsDouble >= nextReadout)
+        {
+            RefreshReadout();
+            nextReadout = Time.unscaledTimeAsDouble + 0.2;
+        }
+    }
 
     public void TogglePause()
     {
@@ -112,7 +132,7 @@ public class EarthOrbitModel : MonoBehaviour
     {
         earth.localPosition = PositionAtDays(ElapsedDays);
         sun.localPosition = Vector3.zero;
-        earthLabel.position = earth.position + Vector3.up * 0.24f;
+        earthLabel.position = earth.position + Vector3.up * earthLabelHeight;
     }
 
     void DrawOrbit()
