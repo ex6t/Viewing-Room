@@ -10,11 +10,11 @@ public class ViewingRoomLessonInput : MonoBehaviour
     public InputActionProperty selectInput; // X: pause / play.
     public InputActionProperty replayInput; // B: reset time / go back.
     public InputActionProperty narrationInput; // Retained binding for the later Kepler recording.
-    public InputActionProperty modeInput; // Y / M: pause and choose a mode.
+    public InputActionProperty modeInput; // Y / M: mode selection in the previous room only.
     public InputActionReference navigationInput; // Left stick: time; left/right arrows in Editor.
 
     public bool IsConfigured => (lesson != null || observatoryTour != null) && continueInput.action != null && selectInput.action != null &&
-        replayInput.action != null && narrationInput.action != null && modeInput.action != null && navigationInput != null;
+        replayInput.action != null && narrationInput.action != null && (observatoryTour != null || modeInput.action != null) && navigationInput != null;
 
     bool previousContinue = true;
     bool previousSelect = true;
@@ -29,7 +29,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
         selectInput.action?.Enable();
         replayInput.action?.Enable();
         narrationInput.action?.Enable();
-        modeInput.action?.Enable();
+        if (observatoryTour == null) modeInput.action?.Enable();
         ResetInput();
     }
 
@@ -49,15 +49,14 @@ public class ViewingRoomLessonInput : MonoBehaviour
         bool confirm = continueInput.action.IsPressed();
         bool select = selectInput.action.IsPressed();
         bool replay = replayInput.action.IsPressed();
-        bool modes = modeInput.action.IsPressed();
+        bool modes = observatoryTour == null && modeInput.action != null && modeInput.action.IsPressed();
         float horizontal = navigationInput.action.ReadValue<Vector2>().x;
         bool left = horizontal < -0.6f || (Keyboard.current != null && Keyboard.current.leftArrowKey.isPressed);
         bool right = horizontal > 0.6f || (Keyboard.current != null && Keyboard.current.rightArrowKey.isPressed);
 
         if (observatoryTour != null)
         {
-            if (modes && !previousMode) observatoryTour.OpenModes();
-            else if (replay && !previousReplay) observatoryTour.ResetOrGoBack();
+            if (replay && !previousReplay) observatoryTour.ResetOrGoBack();
             else if (confirm && !previousContinue) observatoryTour.ContinueLesson();
             else if (select && !previousSelect) observatoryTour.Interact();
         }

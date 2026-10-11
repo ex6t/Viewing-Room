@@ -12043,6 +12043,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 720863076}
     m_Modifications:
     - target: {fileID: 610817338371720448, guid: 383378392267244d08a12583b8506f61, type: 3}
+      propertyPath: m_text
+      value: WELCOME
+      objectReference: {fileID: 0}
+    - target: {fileID: 610817338371720448, guid: 383378392267244d08a12583b8506f61, type: 3}
       propertyPath: m_fontSize
       value: 38
       objectReference: {fileID: 0}
@@ -12053,6 +12057,10 @@ PrefabInstance:
     - target: {fileID: 668423123708218752, guid: 383378392267244d08a12583b8506f61, type: 3}
       propertyPath: m_Name
       value: Robot Icon
+      objectReference: {fileID: 0}
+    - target: {fileID: 3446994011633474750, guid: 383378392267244d08a12583b8506f61, type: 3}
+      propertyPath: m_text
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 3446994011633474750, guid: 383378392267244d08a12583b8506f61, type: 3}
       propertyPath: m_fontSize
@@ -12072,7 +12080,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4755897713000188876, guid: 383378392267244d08a12583b8506f61, type: 3}
       propertyPath: m_text
-      value: 'Left stick: highlight     X: select     '
+      value: 'A: enter observatory'
       objectReference: {fileID: 0}
     - target: {fileID: 4755897713000188876, guid: 383378392267244d08a12583b8506f61, type: 3}
       propertyPath: m_fontSize
@@ -12085,6 +12093,10 @@ PrefabInstance:
     - target: {fileID: 4854222988576893216, guid: 383378392267244d08a12583b8506f61, type: 3}
       propertyPath: m_Name
       value: Robot Tablet
+      objectReference: {fileID: 0}
+    - target: {fileID: 5323302253882077097, guid: 383378392267244d08a12583b8506f61, type: 3}
+      propertyPath: m_text
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 5323302253882077097, guid: 383378392267244d08a12583b8506f61, type: 3}
       propertyPath: m_fontSize
@@ -12188,7 +12200,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6236370132520510860, guid: 383378392267244d08a12583b8506f61, type: 3}
       propertyPath: m_text
-      value: Welcome Traveler! Choose Guided Tour or Free Roam.
+      value: Day / Seasons / Planets / Sun
       objectReference: {fileID: 0}
     - target: {fileID: 6236370132520510860, guid: 383378392267244d08a12583b8506f61, type: 3}
       propertyPath: m_fontSize

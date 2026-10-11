@@ -33,14 +33,12 @@ public class ObservatoryTour : MonoBehaviour
     public TourStep CurrentStep { get; private set; }
     public bool IsGuided { get; private set; }
     public bool IsPresenting { get; private set; }
-    public bool KeepsLocomotionPaused => IsPresenting;
-    public bool CanInvite => !IsGuided && !IsPresenting;
+    public bool KeepsLocomotionPaused => IsGuided;
     public bool IsPaused { get; private set; }
     public bool IsTransitioning => transition != null;
 
     bool initialized;
     bool hasResume;
-    bool menuOpen;
     bool usedTime;
     bool timeReady;
     bool skyPlaced;
@@ -144,7 +142,6 @@ public class ObservatoryTour : MonoBehaviour
     public void StartGuidedTour()
     {
         if (!initialized) return;
-        bool placeDisplays = !menuOpen || !hasResume;
         IsGuided = IsPresenting = true;
         welcome.PauseLocomotion(true);
         captionCanvas.gameObject.SetActive(true);
@@ -160,8 +157,7 @@ public class ObservatoryTour : MonoBehaviour
             observation.ResetDay();
             IsPaused = usedTime = false;
         }
-        if (placeDisplays) PlaceDisplays();
-        menuOpen = false;
+        PlaceDisplays();
         ShowView(CurrentStep != TourStep.Earth);
         bool introducing = CurrentStep == TourStep.Introduction;
         clockStand.gameObject.SetActive(!introducing);
@@ -169,7 +165,7 @@ public class ObservatoryTour : MonoBehaviour
         timeReady = false;
         controls.ResetInput();
         ShowCaption(introducing ? "Start with the sky above us." :
-            CurrentStep == TourStep.Sky ? "Watch the Sun move." : "Earth turns. Day becomes night.", introducing ? float.PositiveInfinity : 7f);
+            CurrentStep == TourStep.Sky ? "A winter day in California." : "Earth turns. Day becomes night.", introducing ? float.PositiveInfinity : 8f);
         hint.text = introducing ? "A: watch a day" : "Left stick: time";
         PlayLine(introducing ? introductionLine : CurrentStep == TourStep.Sky ? skyLine : earthLine);
         HoldForLine(3f);
@@ -196,7 +192,7 @@ public class ObservatoryTour : MonoBehaviour
         if (IsTransitioning || welcome.IsShowing) return;
         if (CurrentStep == TourStep.Complete) { hasResume = false; StartGuidedTour(); }
         else if (!IsPresenting) return;
-        else if (CurrentStep == TourStep.Introduction) OpenModes();
+        else if (CurrentStep == TourStep.Introduction) return;
         else if (CurrentStep == TourStep.Earth) transition = StartCoroutine(ChangeView(true));
         else
         {
@@ -238,47 +234,15 @@ public class ObservatoryTour : MonoBehaviour
     void Finish()
     {
         CurrentStep = TourStep.Complete;
-        IsGuided = IsPresenting = false;
+        IsPresenting = false;
         hasResume = false;
         observation.SetSuspended(true);
         ShowCaption("Next: why seasons change.", float.PositiveInfinity);
         modelDisplay.SetVisible(false);
-        hint.text = "B: watch again     Y: menu";
+        hint.text = "B: watch again";
         hint.color = hintColor;
         RefreshClock();
         PlayLine(nextLine);
-        welcome.ResumeLocomotion();
-    }
-
-    public void OpenModes()
-    {
-        if (!initialized) return;
-        CancelTransition();
-        if (IsPresenting) { resumeStep = CurrentStep; hasResume = true; }
-        menuOpen = true;
-        IsPresenting = false;
-        observation.SetSuspended(true);
-        captionCanvas.gameObject.SetActive(false);
-        clockStand.gameObject.SetActive(false);
-        modelDisplay.SetVisible(false);
-        if (voice != null) voice.Stop();
-        controls.ResetInput();
-        welcome.ShowWelcome();
-    }
-
-    public void ChooseFreeRoam()
-    {
-        CancelTransition();
-        if (IsPresenting) { resumeStep = CurrentStep; hasResume = true; }
-        IsGuided = IsPresenting = menuOpen = false;
-        CurrentStep = TourStep.Ready;
-        observation.SetSuspended(true);
-        captionCanvas.gameObject.SetActive(false);
-        clockStand.gameObject.SetActive(false);
-        modelDisplay.SetVisible(false);
-        if (voice != null) voice.Stop();
-        controls.ResetInput();
-        welcome.ResumeLocomotion();
     }
 
     void ShowView(bool fromGround)
@@ -330,7 +294,7 @@ public class ObservatoryTour : MonoBehaviour
         CurrentStep = TourStep.Sky;
         clockStand.gameObject.SetActive(true);
         ShowView(true);
-        ShowCaption("Watch the Sun move.", 7f);
+        ShowCaption("A winter day in California.", 8f);
         hint.text = "Left stick: time     A: see Earth";
         PlayLine(skyLine);
         HoldForLine(3f);
