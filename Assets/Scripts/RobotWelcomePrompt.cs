@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.XR;
 using CommonUsages = UnityEngine.XR.CommonUsages;
 
-// Welcome, free-roam instructions and tour invitations share the same tablet and A/X choices.
+// The previous room offers modes; the observatory has one guided welcome.
 public class RobotWelcomePrompt : MonoBehaviour
 {
     enum Prompt { Welcome, FreeRoam, Invitation }
@@ -14,6 +14,7 @@ public class RobotWelcomePrompt : MonoBehaviour
     public InputActionProperty freeRoamInput; // X: select the highlighted mode.
     public InputActionReference navigationInput;
     public ViewingRoomLesson firstLesson;
+    public ObservatoryTour observatoryTour;
 
     public PlayerLocomotionPause locomotion;
 
@@ -47,6 +48,7 @@ public class RobotWelcomePrompt : MonoBehaviour
     public void ShowWelcome()
     {
         if (IsShowing || !isActiveAndEnabled) return;
+        if (observatoryTour != null && observatoryTour.IsGuided) return;
         if (firstLesson != null && firstLesson.IsPresenting)
         {
             firstLesson.OpenModes();
@@ -58,13 +60,16 @@ public class RobotWelcomePrompt : MonoBehaviour
 
     public void ShowFreeRoamInstructions()
     {
+        if (observatoryTour != null) return;
         ShowPrompt(Prompt.FreeRoam);
     }
 
     public void ShowTourInvitation()
     {
-        if (IsShowing || firstLesson == null || firstLesson.IsGuided || tablet == null || tablet.gameObject.activeSelf ||
-            (firstLesson.CurrentStep != ViewingRoomLesson.LessonStep.Ready && firstLesson.CurrentStep != ViewingRoomLesson.LessonStep.Complete)) return;
+        if (observatoryTour != null) return;
+        bool canInvite = firstLesson != null && !firstLesson.IsGuided &&
+            (firstLesson.CurrentStep == ViewingRoomLesson.LessonStep.Ready || firstLesson.CurrentStep == ViewingRoomLesson.LessonStep.Complete);
+        if (IsShowing || !canInvite || tablet == null || tablet.gameObject.activeSelf) return;
         ShowPrompt(Prompt.Invitation);
     }
 
@@ -91,7 +96,7 @@ public class RobotWelcomePrompt : MonoBehaviour
         inputReady = previousInputEnabled;
         if (!inputReady) InputSystem.onAfterUpdate += OnInputUpdated;
         continueInput.action.Enable();
-        if (freeRoamInput.action != null)
+        if (observatoryTour == null && freeRoamInput.action != null)
         {
             previousFreeRoamEnabled = freeRoamInput.action.enabled;
             freeRoamInput.action.Enable();
@@ -113,7 +118,8 @@ public class RobotWelcomePrompt : MonoBehaviour
 
     public void ResumeLocomotion()
     {
-        if (IsShowing || (firstLesson != null && firstLesson.KeepsLocomotionPaused)) return;
+        if (IsShowing || (firstLesson != null && firstLesson.KeepsLocomotionPaused) ||
+            (observatoryTour != null && observatoryTour.KeepsLocomotionPaused)) return;
         locomotion?.Resume();
     }
 
@@ -130,7 +136,7 @@ public class RobotWelcomePrompt : MonoBehaviour
             if (!tracked && !Application.isEditor) return;
 
             // Align the origin once after tracking starts; never edit the tracked camera pose.
-            if (currentPrompt == Prompt.Welcome && !headingAligned && locomotion.playerOrigin != null)
+            if (currentPrompt == Prompt.Welcome && observatoryTour == null && !headingAligned && locomotion.playerOrigin != null)
             {
                 Vector3 towardRobot = Vector3.ProjectOnPlane(transform.position - playerCamera.position, Vector3.up);
                 if (towardRobot.sqrMagnitude > 0.01f)
@@ -140,12 +146,21 @@ public class RobotWelcomePrompt : MonoBehaviour
 
             if (currentPrompt == Prompt.Welcome)
             {
-                tablet.Show("ORBIT GUIDE  /  WELCOME", "Welcome to VR Orbit! Choose a guided tour with me, or explore at your own pace.",
-                    "Left stick: highlight     X: select     A: show full text", true);
-                tablet.SetOptions("Guided Tour", "Free Roam");
+                if (observatoryTour != null)
+                {
+                    tablet.Show("WELCOME", "Let’s explore a winter day in California.", "A: begin", false);
+                    tablet.RevealText();
+                }
+                else
+                {
+                    tablet.Show("ORBIT GUIDE  /  WELCOME", "Welcome to VR Orbit! I'll introduce each model and its controls on our guided tour. You set the pace. You can also revisit the room freely.",
+                        "Left stick: highlight     X: select     A: show full text", true);
+                    tablet.SetOptions("Guided Tour", "Free Roam");
+                }
             }
             else if (currentPrompt == Prompt.FreeRoam)
-                tablet.Show("ORBIT GUIDE  /  FREE ROAM", "Teleport freely around the room and visit the canvases to learn at your own pace.", "A: dismiss");
+                tablet.Show("ORBIT GUIDE  /  FREE ROAM",
+                    "Use either trigger to teleport and the right stick to snap turn. Return to me for the guided tour, or visit the central model to try its controls.", "A: dismiss");
             else
             {
                 tablet.Show("ORBIT GUIDE  /  GUIDED TOUR", "Eager to learn? Take a guided tour with me.",
@@ -159,14 +174,22 @@ public class RobotWelcomePrompt : MonoBehaviour
         float vertical = navigationInput.action.ReadValue<Vector2>().y;
         bool up = vertical > 0.6f || (Keyboard.current != null && Keyboard.current.upArrowKey.isPressed);
         bool down = vertical < -0.6f || (Keyboard.current != null && Keyboard.current.downArrowKey.isPressed);
-        if (up && !previousUp) SelectedMode = Mathf.Max(0, SelectedMode - 1);
-        if (down && !previousDown) SelectedMode = Mathf.Min(1, SelectedMode + 1);
-        tablet.SelectAnswer(SelectedMode);
+        if (observatoryTour == null)
+        {
+            if (up && !previousUp) SelectedMode = Mathf.Max(0, SelectedMode - 1);
+            if (down && !previousDown) SelectedMode = Mathf.Min(1, SelectedMode + 1);
+            tablet.SelectAnswer(SelectedMode);
+        }
         previousUp = up;
         previousDown = down;
-        bool select = freeRoamInput.action != null && freeRoamInput.action.IsPressed();
+        bool select = observatoryTour == null && freeRoamInput.action != null && freeRoamInput.action.IsPressed();
         bool pressed = continueInput.action.IsPressed();
-        if (pressed && !previousContinue)
+        if (observatoryTour != null && currentPrompt == Prompt.Welcome && pressed && !previousContinue)
+        {
+            ClearWelcome();
+            observatoryTour.StartGuidedTour();
+        }
+        else if (pressed && !previousContinue)
         {
             if (currentPrompt != Prompt.Welcome) ClearWelcome();
             else if (tablet.IsTyping) tablet.RevealText();

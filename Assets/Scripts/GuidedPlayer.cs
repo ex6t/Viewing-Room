@@ -16,7 +16,7 @@ public class GuidedPlayer : MonoBehaviour
     public bool IsFacingDisplay { get; private set; }
     public bool IsFollowing { get; private set; }
     public bool PlayerHasArrived => !IsFollowing || (!playerFollower.pathPending &&
-        Vector3.ProjectOnPlane(playerFollower.transform.position - robotGuide.transform.position, Vector3.up).magnitude <= playerFollower.stoppingDistance + 0.25f);
+        Vector3.ProjectOnPlane(playerCamera.position - robotGuide.transform.position, Vector3.up).magnitude <= playerFollower.stoppingDistance + 0.25f);
 
     bool followPaused;
     Vector3 previousFollowPosition;
@@ -58,6 +58,9 @@ public class GuidedPlayer : MonoBehaviour
         if (!IsFollowing || followPaused) return;
         Vector3 position = playerFollower.transform.position;
         Vector3 movement = Vector3.ProjectOnPlane(position - previousFollowPosition, Vector3.up);
+        // Accumulate small frame steps so the controller's minimum distance cannot discard travel.
+        if (playerController != null && playerController.enabled &&
+            movement.sqrMagnitude < playerController.minMoveDistance * playerController.minMoveDistance) return;
         // Translate the origin, never the tracked camera. Head movement and viewing direction remain the user's.
         if (playerController != null && playerController.enabled) playerController.Move(movement);
         else playerOrigin.transform.position += movement;
