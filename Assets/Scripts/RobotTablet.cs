@@ -15,6 +15,7 @@ public class RobotTablet : MonoBehaviour
     public TMP_Text[] answerLabels;
 
     [Header("View Placement")]
+    public Transform fixedAnchor; // Optional world-space lectern; legacy tablets still follow the headset.
     public float distanceInFront = 1.35f;
     public float heightOffset = -0.43f;
     public float charactersPerSecond = 45f;
@@ -38,7 +39,8 @@ public class RobotTablet : MonoBehaviour
     public void Show(string title, string text, string controls, bool showAnswers = false, bool modelView = false)
     {
         // Parenting once also follows the headset's final before-render tracking update.
-        if (playerCamera != null && transform.parent != playerCamera) transform.SetParent(playerCamera, true);
+        if (fixedAnchor != null) transform.SetParent(fixedAnchor, false);
+        else if (playerCamera != null && transform.parent != playerCamera) transform.SetParent(playerCamera, true);
         besideModel = modelView;
         gameObject.SetActive(true);
         heading.text = title;
@@ -113,6 +115,11 @@ public class RobotTablet : MonoBehaviour
 
     void PlaceTablet()
     {
+        if (fixedAnchor != null)
+        {
+            transform.SetPositionAndRotation(fixedAnchor.position, fixedAnchor.rotation);
+            return;
+        }
         if (playerCamera == null) return;
         // Follow the full headset pose, including looking up/down, so every prompt stays in view.
         float distance = besideModel ? modelDistanceInFront : distanceInFront;

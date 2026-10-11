@@ -2,13 +2,14 @@ using System;
 using UnityEngine;
 
 // One clock connects the local sky to the inherited Earth orbit. Day zero is a
-// teaching reference at perihelion, not a live date or a particular town.
+// teaching reference at perihelion, not a live date or civil clock.
 public class EarthObservationModel : MonoBehaviour
 {
     public EarthOrbitModel earthOrbit;
     public Transform globeAxis;
     public Transform globeSpin;
     public Transform observerMarker;
+    public Renderer globeRenderer;
     public Light worldSun;
     public Transform skySun;
     public Transform observationOrigin;
@@ -18,10 +19,10 @@ public class EarthObservationModel : MonoBehaviour
     public float globeRadius = 0.11f;
     public float skySunDistance = 60f;
     public float hoursPerSecond = 1f;
-    public float groundSunIntensity = 1.2f;
-    public float spaceSunIntensity = 1.2f;
+    public float groundSunIntensity = 3.2f;
 
-    public const double LatitudeDegrees = 35.0;
+    public const double LatitudeDegrees = 34.052235;
+    public const double LongitudeDegrees = -118.243683; // Los Angeles; east-positive longitude.
     public const double InitialSolarHours = 14.0;
     public const double InitialDays = 0.0;
     // A solar day includes Earth's progress around the Sun. Spin must not reset at an orbital wrap.
@@ -41,7 +42,7 @@ public class EarthObservationModel : MonoBehaviour
     double initialRotation, vernalRotation, latitudeSin, latitudeCos;
     Vector3 orbitSunDirection;
     bool initialized;
-    bool groundView = true;
+    MaterialPropertyBlock globeLighting;
     int sunDirectionId;
     int worldToSkyId;
     int starsRotationId;
@@ -108,9 +109,8 @@ public class EarthObservationModel : MonoBehaviour
     public void ResetDay() { SetDays(InitialDays); }
 
     // Presentation changes views without changing simulation time or the scientific frame.
-    public void ApplyView(bool viewFromGround)
+    public void ApplyView()
     {
-        groundView = viewFromGround;
         if (InitializeModel()) UpdatePresentation();
     }
 
@@ -142,7 +142,8 @@ public class EarthObservationModel : MonoBehaviour
         SolarDeclinationDegrees = Math.Asin(Math.Max(-1.0, Math.Min(1.0, sx * nx + sy * ny))) * 180.0 / Math.PI;
         UpdateStars(spin - vernalRotation);
         // Research XY -> Unity XZ reverses handedness, hence the negative local Y spin.
-        if (globeSpin != null) globeSpin.localRotation = Quaternion.Euler(0f, (float)(-spin * 180.0 / Math.PI), 0f);
+        // The imported mesh has Greenwich at -Z and east at +X. Anchor its California meridian.
+        if (globeSpin != null) globeSpin.localRotation = Quaternion.Euler(0f, (float)(-spin * 180.0 / Math.PI + LongitudeDegrees - 90.0), 0f);
         if (observerMarker != null)
         {
             observerMarker.position = earthOrbit.earth.position +
@@ -180,9 +181,21 @@ public class EarthObservationModel : MonoBehaviour
         }
         if (worldSun != null)
         {
-            Vector3 direction = groundView ? groundSunDirection : earthOrbit.orbitPlane.TransformDirection(orbitSunDirection);
-            worldSun.transform.rotation = Quaternion.LookRotation(-direction);
-            worldSun.intensity = groundView ? groundSunIntensity * Mathf.Clamp01((SunDirectionLocal.y + 0.02f) / 0.12f) : spaceSunIntensity;
+            worldSun.transform.rotation = Quaternion.LookRotation(-groundSunDirection);
+            // Keep the ground illuminated by its own sky even when the globe is visible.
+            // Display brightness is artistic; inverse-square distance and Sun direction use the orbit.
+            float radiusAU = earthOrbit.PositionAtDays(SimulationDays).magnitude / earthOrbit.metresPerAU;
+            float distanceFactor = 1f / (radiusAU * radiusAU);
+            worldSun.intensity = groundSunIntensity * distanceFactor * Mathf.Clamp01((SunDirectionLocal.y + 0.02f) / 0.12f);
+            worldSun.color = Color.Lerp(new Color(1f, 0.65f, 0.4f), new Color(1f, 0.97f, 0.91f),
+                Mathf.Clamp01(SunDirectionLocal.y / 0.2f));
+        }
+        if (globeRenderer != null)
+        {
+            if (globeLighting == null) globeLighting = new MaterialPropertyBlock();
+            globeRenderer.GetPropertyBlock(globeLighting);
+            globeLighting.SetVector("_ModelSunDirection", earthOrbit.orbitPlane.TransformDirection(orbitSunDirection));
+            globeRenderer.SetPropertyBlock(globeLighting);
         }
         if (skyMaterial != null)
         {

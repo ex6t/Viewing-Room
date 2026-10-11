@@ -7,13 +7,15 @@ using UnityEngine.UI;
 // A short observation and its explanation share one clock and one comfortable viewing position.
 public class ObservatoryTour : MonoBehaviour
 {
-    public enum TourStep { Ready, Sky, Earth, Complete }
+    public enum TourStep { Ready, Sky, Earth, Complete, Introduction }
     public RobotWelcomePrompt welcome;
     public ViewingRoomLessonInput controls;
     public EarthObservationModel observation;
     public Transform playerCamera;
+    public Transform displayAnchor;
     public GameObject groundView;
     public GameObject modelView;
+    public ObservatoryModelDisplay modelDisplay;
     public Light modelLight;
     public Canvas captionCanvas;
     public TMP_Text caption;
@@ -22,6 +24,7 @@ public class ObservatoryTour : MonoBehaviour
     public Transform clockStand;
     public Image viewFade;
     public AudioSource voice;
+    public AudioClip introductionLine;
     public AudioClip skyLine;
     public AudioClip earthLine;
     public AudioClip nextLine;
@@ -40,6 +43,7 @@ public class ObservatoryTour : MonoBehaviour
     bool menuOpen;
     bool usedTime;
     bool timeReady;
+    bool skyPlaced;
     TourStep resumeStep;
     Coroutine transition;
     Material runtimeSky;
@@ -63,7 +67,7 @@ public class ObservatoryTour : MonoBehaviour
     void Start()
     {
         if (welcome == null || controls == null || observation == null || playerCamera == null ||
-            groundView == null || modelView == null || captionCanvas == null || caption == null ||
+            groundView == null || modelView == null || modelDisplay == null || captionCanvas == null || caption == null ||
             hint == null || clock == null || clockStand == null || viewFade == null || !controls.IsConfigured ||
             !observation.InitializeModel())
         {
@@ -78,7 +82,25 @@ public class ObservatoryTour : MonoBehaviour
         observation.SetSuspended(true);
         captionCanvas.gameObject.SetActive(false);
         clockStand.gameObject.SetActive(false);
+        modelDisplay.SetVisible(false);
         ClearFade();
+        if (ObservatoryArrival.BeginObservation)
+        {
+            ObservatoryArrival.BeginObservation = false;
+            viewFade.color = Color.black;
+            viewFade.gameObject.SetActive(true);
+            StartCoroutine(ArriveFromEntrance());
+        }
+    }
+
+    IEnumerator ArriveFromEntrance()
+    {
+        // Wait for every Start callback so the old welcome cannot reopen over the lesson.
+        yield return null;
+        if (!isActiveAndEnabled) yield break;
+        welcome.ClearWelcome();
+        StartGuidedTour();
+        transition = StartCoroutine(BeginObservation(true));
     }
 
     void OnEnable()
@@ -90,7 +112,7 @@ public class ObservatoryTour : MonoBehaviour
     {
         if (!initialized || welcome.IsShowing) return;
         controls.ReadInput();
-        if (!IsPresenting || welcome.IsShowing || IsTransitioning) return;
+        if (!IsPresenting || welcome.IsShowing || IsTransitioning || CurrentStep == TourStep.Introduction) return;
 
         float direction = controls.ReadTimeDirection();
         if (Mathf.Abs(direction) < 0.01f) timeReady = true;
@@ -103,8 +125,7 @@ public class ObservatoryTour : MonoBehaviour
         else if (!IsPaused && Time.unscaledTime >= holdUntil)
             observation.SetDays(observation.SimulationDays + Time.unscaledDeltaTime * automaticHoursPerSecond / 24.0);
 
-        if (CurrentStep == TourStep.Sky)
-            RenderSettings.ambientLight = Color.Lerp(new Color(0.018f, 0.024f, 0.04f), new Color(0.16f, 0.18f, 0.22f),
+        RenderSettings.ambientLight = Color.Lerp(new Color(0.018f, 0.024f, 0.04f), new Color(0.48f, 0.55f, 0.62f),
                 Mathf.Clamp01((observation.SunDirectionLocal.y + 0.08f) / 0.35f));
 
         if (Time.unscaledTimeAsDouble >= nextClock)
@@ -135,32 +156,37 @@ public class ObservatoryTour : MonoBehaviour
         }
         else
         {
-            CurrentStep = TourStep.Sky;
+            CurrentStep = TourStep.Introduction;
             observation.ResetDay();
             IsPaused = usedTime = false;
         }
         if (placeDisplays) PlaceDisplays();
         menuOpen = false;
-        ShowView(CurrentStep == TourStep.Sky);
-        observation.SetSuspended(false);
+        ShowView(CurrentStep != TourStep.Earth);
+        bool introducing = CurrentStep == TourStep.Introduction;
+        clockStand.gameObject.SetActive(!introducing);
+        observation.SetSuspended(introducing);
         timeReady = false;
         controls.ResetInput();
-        ShowCaption(CurrentStep == TourStep.Sky ? "Watch the Sun move." : "Earth turns. Day becomes night.", 7f);
-        PlayLine(CurrentStep == TourStep.Sky ? skyLine : earthLine);
-        holdUntil = Time.unscaledTime + 3f;
+        ShowCaption(introducing ? "Start with the sky above us." :
+            CurrentStep == TourStep.Sky ? "Watch the Sun move." : "Earth turns. Day becomes night.", introducing ? float.PositiveInfinity : 7f);
+        hint.text = introducing ? "A: watch a day" : "Left stick: time";
+        PlayLine(introducing ? introductionLine : CurrentStep == TourStep.Sky ? skyLine : earthLine);
+        HoldForLine(3f);
         RefreshClock();
     }
 
     public void ContinueLesson()
     {
         if (!IsPresenting || IsTransitioning || welcome.IsShowing) return;
-        if (CurrentStep == TourStep.Sky) transition = StartCoroutine(ChangeView(false));
+        if (CurrentStep == TourStep.Introduction) transition = StartCoroutine(BeginObservation());
+        else if (CurrentStep == TourStep.Sky) transition = StartCoroutine(ChangeView(false));
         else if (CurrentStep == TourStep.Earth) Finish();
     }
 
     public void Interact()
     {
-        if (!IsPresenting || IsTransitioning) return;
+        if (!IsPresenting || IsTransitioning || CurrentStep == TourStep.Introduction) return;
         IsPaused = !IsPaused;
         RefreshClock();
     }
@@ -170,6 +196,7 @@ public class ObservatoryTour : MonoBehaviour
         if (IsTransitioning || welcome.IsShowing) return;
         if (CurrentStep == TourStep.Complete) { hasResume = false; StartGuidedTour(); }
         else if (!IsPresenting) return;
+        else if (CurrentStep == TourStep.Introduction) OpenModes();
         else if (CurrentStep == TourStep.Earth) transition = StartCoroutine(ChangeView(true));
         else
         {
@@ -196,7 +223,7 @@ public class ObservatoryTour : MonoBehaviour
         PlayLine(fromGround ? skyLine : earthLine);
         timeReady = false;
         controls.ResetInput();
-        holdUntil = Time.unscaledTime + 4f;
+        HoldForLine(4f);
         RefreshClock();
         for (float t = 0f; t < 0.25f; t += Time.unscaledDeltaTime)
         {
@@ -215,6 +242,7 @@ public class ObservatoryTour : MonoBehaviour
         hasResume = false;
         observation.SetSuspended(true);
         ShowCaption("Next: why seasons change.", float.PositiveInfinity);
+        modelDisplay.SetVisible(false);
         hint.text = "B: watch again     Y: menu";
         hint.color = hintColor;
         RefreshClock();
@@ -232,6 +260,7 @@ public class ObservatoryTour : MonoBehaviour
         observation.SetSuspended(true);
         captionCanvas.gameObject.SetActive(false);
         clockStand.gameObject.SetActive(false);
+        modelDisplay.SetVisible(false);
         if (voice != null) voice.Stop();
         controls.ResetInput();
         welcome.ShowWelcome();
@@ -246,6 +275,7 @@ public class ObservatoryTour : MonoBehaviour
         observation.SetSuspended(true);
         captionCanvas.gameObject.SetActive(false);
         clockStand.gameObject.SetActive(false);
+        modelDisplay.SetVisible(false);
         if (voice != null) voice.Stop();
         controls.ResetInput();
         welcome.ResumeLocomotion();
@@ -253,33 +283,74 @@ public class ObservatoryTour : MonoBehaviour
 
     void ShowView(bool fromGround)
     {
-        groundView.SetActive(fromGround);
+        groundView.SetActive(true); // The local sky remains visible beside its Earth explanation.
         modelView.SetActive(!fromGround);
+        modelDisplay.SetVisible(!fromGround);
         if (modelLight != null) modelLight.enabled = !fromGround;
-        observation.ApplyView(fromGround);
-        if (runtimeSky != null) runtimeSky.SetFloat("_GroundView", fromGround ? 1f : 0f);
-        RenderSettings.ambientLight = fromGround ? new Color(0.16f, 0.18f, 0.22f) : new Color(0.025f, 0.03f, 0.045f);
+        observation.ApplyView();
+        if (runtimeSky != null) runtimeSky.SetFloat("_GroundView", 1f);
+        RenderSettings.ambientLight = Color.Lerp(new Color(0.018f, 0.024f, 0.04f), new Color(0.48f, 0.55f, 0.62f),
+            Mathf.Clamp01((observation.SunDirectionLocal.y + 0.08f) / 0.35f));
     }
 
     void PlaceDisplays()
     {
-        Vector3 forward = Vector3.ProjectOnPlane(playerCamera.forward, Vector3.up).normalized;
+        Vector3 forward = Vector3.ProjectOnPlane(displayAnchor != null ? displayAnchor.forward : playerCamera.forward, Vector3.up).normalized;
         if (forward.sqrMagnitude < 0.01f) forward = Vector3.right;
         Vector3 right = Vector3.Cross(Vector3.up, forward);
         Vector3 eye = playerCamera.position;
-        modelView.transform.position = eye + forward * 3.4f - Vector3.up * 0.25f;
-        // A view from above the northern hemisphere keeps our observation point visible through the day.
+        modelView.transform.position = new Vector3(0f, -100f, 0f);
+        // Show a tilted, north-up globe. A point on the far side is naturally hidden.
         Vector3 modelNorth = observation.earthOrbit.orbitPlane.localRotation * observation.AxisDirectionLocal;
-        modelView.transform.rotation = Quaternion.LookRotation(forward) * Quaternion.FromToRotation(modelNorth, Vector3.back);
-        captionCanvas.transform.SetPositionAndRotation(eye + forward * 2.8f - right * 1.45f - Vector3.up * 0.73f,
+        modelView.transform.rotation = Quaternion.FromToRotation(modelNorth, new Vector3(0f, 0.65f, -0.76f).normalized);
+        if (displayAnchor != null)
+            captionCanvas.transform.SetPositionAndRotation(displayAnchor.position, displayAnchor.rotation);
+        else captionCanvas.transform.SetPositionAndRotation(eye + forward * 2.8f - right * 1.45f - Vector3.up * 0.73f,
             Quaternion.LookRotation((forward * 2.8f - right * 1.45f).normalized));
-        clockStand.SetPositionAndRotation(eye + forward * 3.4f - Vector3.up * 1.15f, Quaternion.LookRotation(forward));
-        if (observation.skyFrame != null)
+        clockStand.SetPositionAndRotation(captionCanvas.transform.position - Vector3.up * 0.26f, captionCanvas.transform.rotation);
+        if (observation.skyFrame != null && !skyPlaced)
         {
             Vector3 initialSun = Vector3.ProjectOnPlane(observation.SunDirectionLocal, Vector3.up).normalized;
             observation.skyFrame.rotation = Quaternion.FromToRotation(initialSun, forward);
+            skyPlaced = true;
         }
         observation.SetDays(observation.SimulationDays);
+    }
+
+    IEnumerator BeginObservation(bool arriving = false)
+    {
+        if (voice != null) voice.Stop();
+        viewFade.gameObject.SetActive(true);
+        for (float t = 0f; !arriving && t < 0.35f; t += Time.unscaledDeltaTime)
+        {
+            viewFade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(t / 0.35f));
+            yield return null;
+        }
+        viewFade.color = Color.black;
+        CurrentStep = TourStep.Sky;
+        clockStand.gameObject.SetActive(true);
+        ShowView(true);
+        ShowCaption("Watch the Sun move.", 7f);
+        hint.text = "Left stick: time     A: see Earth";
+        PlayLine(skyLine);
+        HoldForLine(3f);
+        timeReady = false;
+        controls.ResetInput();
+        RefreshClock();
+        for (float t = 0f; t < 0.35f; t += Time.unscaledDeltaTime)
+        {
+            viewFade.color = new Color(0f, 0f, 0f, 1f - Mathf.Clamp01(t / 0.35f));
+            yield return null;
+        }
+        ClearFade();
+        observation.SetSuspended(false);
+        transition = null;
+    }
+
+    void HoldForLine(float minimumSeconds)
+    {
+        float seconds = voice != null && voice.clip != null ? voice.clip.length : minimumSeconds;
+        holdUntil = Time.unscaledTime + Mathf.Max(minimumSeconds, seconds);
     }
 
     void ShowCaption(string text, float seconds)
@@ -329,6 +400,7 @@ public class ObservatoryTour : MonoBehaviour
         if (welcome != null) welcome.ResumeLocomotion();
         if (captionCanvas != null) captionCanvas.gameObject.SetActive(false);
         if (clockStand != null) clockStand.gameObject.SetActive(false);
+        if (modelDisplay != null) modelDisplay.SetVisible(false);
     }
 
     void OnDestroy()

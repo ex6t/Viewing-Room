@@ -150,7 +150,7 @@ public class RobotWelcomePrompt : MonoBehaviour
             {
                 if (observatoryTour != null)
                 {
-                    tablet.Show("OBSERVATORY", "Watch a day pass. Then see what Earth is doing.", "Left stick: choose     A: start", true);
+                    tablet.Show("ORBIT", "A journey from Earth into space.", "Left stick: choose     A: start", true);
                     tablet.RevealText();
                 }
                 else tablet.Show("ORBIT GUIDE  /  WELCOME", "Welcome to VR Orbit! I'll introduce each model and its controls on our guided tour. You set the pace. You can also revisit the room freely.",
@@ -158,7 +158,7 @@ public class RobotWelcomePrompt : MonoBehaviour
                 tablet.SetOptions("Guided Tour", "Free Roam");
             }
             else if (currentPrompt == Prompt.FreeRoam)
-                tablet.Show("ORBIT GUIDE  /  FREE ROAM", observatoryTour != null ? "Explore the observatory. Return to me to watch a day pass." :
+                tablet.Show("ORBIT GUIDE  /  FREE ROAM", observatoryTour != null ? "Trigger: teleport. Right stick: turn." :
                     "Use either trigger to teleport and the right stick to snap turn. Return to me for the guided tour, or visit the central model to try its controls.", "A: dismiss");
             else
             {

@@ -40,7 +40,7 @@ Material:
     - _NightHorizonColor: {r: 0.015, g: 0.02, b: 0.044999972, a: 1}
     - _NightZenithColor: {r: 0.002, g: 0.005, b: 0.015, a: 1}
     - _SunColor: {r: 3.8, g: 2.9, b: 1.7, a: 1}
-    - _SunDirection: {r: -0.46088183, g: 0.43149963, b: -0.77549726, a: 0}
+    - _SunDirection: {r: -0.46088183, g: 0.444268, b: -0.7682538, a: 0}
     - _TwilightColor: {r: 0.86, g: 0.26999995, b: 0.09999997, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
