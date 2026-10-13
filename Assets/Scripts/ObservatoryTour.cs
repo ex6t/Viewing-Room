@@ -3,6 +3,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 // A short observation and its explanation share one clock and one comfortable viewing position.
 public class ObservatoryTour : MonoBehaviour
@@ -29,6 +30,7 @@ public class ObservatoryTour : MonoBehaviour
     public AudioClip earthLine;
     public AudioClip nextLine;
     public float automaticHoursPerSecond = 0.5f;
+    public string seasonsScene = "Assets/Scenes/Seasons.unity";
 
     public TourStep CurrentStep { get; private set; }
     public bool IsGuided { get; private set; }
@@ -174,7 +176,21 @@ public class ObservatoryTour : MonoBehaviour
 
     public void ContinueLesson()
     {
-        if (!IsPresenting || IsTransitioning || welcome.IsShowing) return;
+        if (IsTransitioning || welcome.IsShowing) return;
+        if (CurrentStep == TourStep.Complete)
+        {
+            if (string.IsNullOrWhiteSpace(seasonsScene) || !Application.CanStreamedLevelBeLoaded(seasonsScene))
+            {
+                ShowCaption("Seasons is unavailable. You can replay this lesson.", float.PositiveInfinity);
+                hint.text = "A: retry seasons   B: watch again";
+                controls.ResetInput();
+                Debug.LogWarning("[ObservatoryTour] Enable the Seasons scene in Build Settings.", this);
+                return;
+            }
+            transition = StartCoroutine(EnterSeasons());
+            return;
+        }
+        if (!IsPresenting) return;
         if (CurrentStep == TourStep.Introduction) transition = StartCoroutine(BeginObservation());
         else if (CurrentStep == TourStep.Sky) transition = StartCoroutine(ChangeView(false));
         else if (CurrentStep == TourStep.Earth) Finish();
@@ -239,10 +255,48 @@ public class ObservatoryTour : MonoBehaviour
         observation.SetSuspended(true);
         ShowCaption("Next: why seasons change.", float.PositiveInfinity);
         modelDisplay.SetVisible(false);
-        hint.text = "B: watch again";
+        hint.text = "A: seasons   B: watch again";
         hint.color = hintColor;
+        controls.ResetInput();
         RefreshClock();
         PlayLine(nextLine);
+    }
+
+    IEnumerator EnterSeasons()
+    {
+        if (voice != null) voice.Stop();
+        observation.SetSuspended(true);
+        viewFade.gameObject.SetActive(true);
+        for (float t = 0f; t < 0.35f; t += Time.unscaledDeltaTime)
+        {
+            viewFade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(t / 0.35f));
+            yield return null;
+        }
+        viewFade.color = Color.black;
+        // Restore the outgoing rig while its EventSystem is still alive.
+        welcome.locomotion.Restore();
+        yield return null;
+
+        AsyncOperation load = null;
+        try
+        {
+            load = SceneManager.LoadSceneAsync(seasonsScene, LoadSceneMode.Single);
+        }
+        catch (Exception error)
+        {
+            Debug.LogWarning("[ObservatoryTour] Could not load Seasons: " + error.Message, this);
+        }
+        if (load == null)
+        {
+            welcome.PauseLocomotion(true);
+            ClearFade();
+            ShowCaption("Seasons could not open. Try again or replay this lesson.", float.PositiveInfinity);
+            hint.text = "A: retry seasons   B: watch again";
+            controls.ResetInput();
+            transition = null;
+            yield break;
+        }
+        yield return load;
     }
 
     void ShowView(bool fromGround)

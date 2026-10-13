@@ -2,7 +2,7 @@
 
 A Unity VR observatory for the Orbit capstone. Begin in a calm, enclosed entrance on Earth, then connect the sky overhead to Earth's rotation. Quest 3 standalone is the first target.
 
-Open with **Unity 6000.5.10f1** and Android Build Support, SDK/NDK and OpenJDK. Open **`Assets/Scenes/Arrival.unity`** and enter Play Mode. The project uses URP 17.5, XR Interaction Toolkit 3.5.1 and OpenXR 1.17.1. Arrival is the first build scene, followed by Observatory; the previous `SampleScene.unity` remains available but disabled in the build. Editor flow and scientific checks pass. The latest presentation still needs Quest headset testing.
+Open with **Unity 6000.5.10f1** and Android Build Support, SDK/NDK and OpenJDK. Open **`Assets/Scenes/Arrival.unity`** and enter Play Mode. The project uses URP 17.5, XR Interaction Toolkit 3.5.1 and OpenXR 1.17.1. Arrival is the first build scene, followed by Observatory, Seasons and OrbitalModel; the previous `SampleScene.unity` remains available but disabled in the build. Editor flow and scientific checks pass. The new scene connections still need physical Quest headset testing.
 
 ## Guided experience
 
@@ -20,7 +20,7 @@ Slim rear arches, a low terrace, hills and inherited nature props leave the outd
 | Reset the day / return to sky / replay | B | B |
 | Snap turn | Right stick | XR input simulation |
 
-Time moves gently on its own. The left stick moves time even while playback is paused. Y and M do not open a menu. Travel stays paused during the guided chapter and its ending; B replays the chapter. Tracked head movement and guided snap turning remain available. Opening Observatory directly in the Editor retains its introductory flow for development.
+Time moves gently on its own. The left stick moves time even while playback is paused. Y and M do not open a menu. Travel stays paused during the guided chapter and its ending; A continues into Seasons and B replays the chapter. Tracked head movement and guided snap turning remain available. Opening Observatory directly in the Editor retains its introductory flow for development.
 
 ## Research and scope
 
@@ -30,4 +30,6 @@ The globe, marker and exterior sky share one clock. A display copy calibrates Ea
 
 The prototype reuses the inherited Earth, star skybox, robot, nature props, XR Origin and locomotion setup. Star attribution remains in `Assets/Real Stars Skybox/Demo Scene/Documentation.txt`. Prerecorded narration plays locally.
 
-**The connected chapter covers arrival, day/night observation and the Earth reveal.** Seasons is previewed at the end. Seasons controls, constellation selection, other planets and the changing-Sun chapter remain future work. The inherited project descends from [KellyLFrear/FALL2025-VR-Orbit-Simulation](https://github.com/KellyLFrear/FALL2025-VR-Orbit-Simulation); imported content retains its original ownership.
+**The connected route covers Arrival, day/night observation, the Earth reveal, the inherited Seasons preview and OrbitalModel (HubStation).** At observatory completion, release A and press it again to enter Seasons. Its first fresh A press opens the second tablet; its next fresh A press continues to HubStation. The station Home button returns to Arrival.
+
+The imported scenes reuse the compatible XR rig and have materials adapted for URP. Their inherited season timeline and illustrative scenery are retained; they are not yet reconciled with the observatory reference clock or validated as a SolGeoVis implementation. Sun-path comparisons, selectable locations, a refined seasons lesson, constellation selection and the changing-Sun chapter remain future work. The inherited project descends from [KellyLFrear/FALL2025-VR-Orbit-Simulation](https://github.com/KellyLFrear/FALL2025-VR-Orbit-Simulation); imported content retains its original ownership.
