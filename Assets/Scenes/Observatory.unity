@@ -9350,6 +9350,7 @@ GameObject:
   - component: {fileID: 1510080349}
   - component: {fileID: 1510080350}
   - component: {fileID: 1510080351}
+  - component: {fileID: 1510080352}
   m_Layer: 2
   m_Name: XR Origin (VR)
   m_TagString: Untagged
@@ -9512,6 +9513,18 @@ MonoBehaviour:
   - {fileID: -6395602842196007441, guid: c348712bda248c246b8c49b3db54643f, type: 3}
   - {fileID: 3279264004350380116, guid: c348712bda248c246b8c49b3db54643f, type: 3}
   playerOrigin: {fileID: 1510080344}
+--- !u!114 &1510080352
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510080342}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b287228aed244c118eed8ec37677fad, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::XRSpawnCenter
 --- !u!1 &1510770396
 GameObject:
   m_ObjectHideFlags: 0
@@ -14513,6 +14526,7 @@ MonoBehaviour:
   earthLine: {fileID: 8300000, guid: 0c48c8046479e43fdb0c4f7c8b1daa1f, type: 3}
   nextLine: {fileID: 8300000, guid: f86dc64a95d064afc9621197a6b3f0c9, type: 3}
   automaticHoursPerSecond: 0.5
+  seasonsScene: Assets/Scenes/Seasons.unity
 --- !u!114 &2013549281
 MonoBehaviour:
   m_ObjectHideFlags: 0
