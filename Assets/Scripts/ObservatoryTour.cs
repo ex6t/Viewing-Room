@@ -231,7 +231,7 @@ public class ObservatoryTour : MonoBehaviour
         viewFade.color = Color.black;
         CurrentStep = fromGround ? TourStep.Sky : TourStep.Earth;
         ShowView(fromGround);
-        ShowCaption(fromGround ? "Watch the same moment from Earth." : "You were at this dot.", 8f);
+        ShowCaption(fromGround ? "Watch the same moment from Earth." : "You're at the blue dot.", 8f);
         PlayLine(fromGround ? skyLine : earthLine);
         timeReady = false;
         controls.ResetInput();
