@@ -1,78 +1,189 @@
 fileFormatVersion: 2
 guid: 71f6b54e2e708df4db10865532ccfe85
-timeCreated: 1459742967
-licenseType: Store
 ModelImporter:
-  serializedVersion: 19
-  fileIDToRecycleName:
-    100000: sky_border
-    100002: sky_border001
-    100004: sky_fence
-    100006: sky_fence001
-    100008: sky_floor
-    100010: sky_floor_bottom
-    100012: //RootNode
-    100014: sky_fence 1
-    100016: sky_fence002
-    100018: sky_floor_bottom_curve
-    400000: sky_border
-    400002: sky_border001
-    400004: sky_fence
-    400006: sky_fence001
-    400008: sky_floor
-    400010: sky_floor_bottom
-    400012: //RootNode
-    400014: sky_fence 1
-    400016: sky_fence002
-    400018: sky_floor_bottom_curve
-    2300000: sky_border
-    2300002: sky_border001
-    2300004: sky_fence
-    2300006: sky_fence001
-    2300008: sky_floor
-    2300010: sky_floor_bottom
-    2300012: sky_fence 1
-    2300014: sky_fence002
-    2300016: //RootNode
-    3300000: sky_border
-    3300002: sky_border001
-    3300004: sky_fence
-    3300006: sky_fence001
-    3300008: sky_floor
-    3300010: sky_floor_bottom
-    3300012: sky_fence 1
-    3300014: sky_fence002
-    3300016: //RootNode
-    4300000: sky_floor
-    4300002: sky_border
-    4300004: sky_floor_bottom
-    4300006: sky_border001
-    4300008: sky_fence
-    4300010: sky_fence001
-    4300012: sky_fence
-    4300014: sky_fence002
-    4300016: sky_floor_lod1
-    6400000: //RootNode
+  serializedVersion: 24501
+  internalIDToNameTable:
+  - first:
+      1: 100000
+    second: sky_border
+  - first:
+      1: 100002
+    second: sky_border001
+  - first:
+      1: 100004
+    second: sky_fence
+  - first:
+      1: 100006
+    second: sky_fence001
+  - first:
+      1: 100008
+    second: sky_floor
+  - first:
+      1: 100010
+    second: sky_floor_bottom
+  - first:
+      1: 100012
+    second: //RootNode
+  - first:
+      1: 100014
+    second: sky_fence 1
+  - first:
+      1: 100016
+    second: sky_fence002
+  - first:
+      1: 100018
+    second: sky_floor_bottom_curve
+  - first:
+      4: 400000
+    second: sky_border
+  - first:
+      4: 400002
+    second: sky_border001
+  - first:
+      4: 400004
+    second: sky_fence
+  - first:
+      4: 400006
+    second: sky_fence001
+  - first:
+      4: 400008
+    second: sky_floor
+  - first:
+      4: 400010
+    second: sky_floor_bottom
+  - first:
+      4: 400012
+    second: //RootNode
+  - first:
+      4: 400014
+    second: sky_fence 1
+  - first:
+      4: 400016
+    second: sky_fence002
+  - first:
+      4: 400018
+    second: sky_floor_bottom_curve
+  - first:
+      23: 2300000
+    second: sky_border
+  - first:
+      23: 2300002
+    second: sky_border001
+  - first:
+      23: 2300004
+    second: sky_fence
+  - first:
+      23: 2300006
+    second: sky_fence001
+  - first:
+      23: 2300008
+    second: sky_floor
+  - first:
+      23: 2300010
+    second: sky_floor_bottom
+  - first:
+      23: 2300012
+    second: sky_fence 1
+  - first:
+      23: 2300014
+    second: sky_fence002
+  - first:
+      23: 2300016
+    second: //RootNode
+  - first:
+      33: 3300000
+    second: sky_border
+  - first:
+      33: 3300002
+    second: sky_border001
+  - first:
+      33: 3300004
+    second: sky_fence
+  - first:
+      33: 3300006
+    second: sky_fence001
+  - first:
+      33: 3300008
+    second: sky_floor
+  - first:
+      33: 3300010
+    second: sky_floor_bottom
+  - first:
+      33: 3300012
+    second: sky_fence 1
+  - first:
+      33: 3300014
+    second: sky_fence002
+  - first:
+      33: 3300016
+    second: //RootNode
+  - first:
+      43: 4300000
+    second: sky_floor
+  - first:
+      43: 4300002
+    second: sky_border
+  - first:
+      43: 4300004
+    second: sky_floor_bottom
+  - first:
+      43: 4300006
+    second: sky_border001
+  - first:
+      43: 4300008
+    second: sky_fence
+  - first:
+      43: 4300010
+    second: sky_fence001
+  - first:
+      43: 4300012
+    second: sky_fence
+  - first:
+      43: 4300014
+    second: sky_fence002
+  - first:
+      43: 4300016
+    second: sky_floor_lod1
+  - first:
+      64: 6400000
+    second: //RootNode
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sky_floor
+    second: {fileID: 2100000, guid: 3077630c2b552084084eefe0c912c1b5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sky_trims
+    second: {fileID: 2100000, guid: 359c0ede73f3ca1458560f0ae0e1bd5d, type: 2}
   materials:
-    importMaterials: 1
+    materialImportMode: 1
     materialName: 0
     materialSearch: 2
+    materialLocation: 1
+    searchTexturesGlobally: 1
   animations:
     legacyGenerateAnimations: 4
     bakeSimulation: 0
-    resampleRotations: 1
+    resampleCurves: 1
     optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
     motionNodeName: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
     animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
     animationCompression: 1
     animationRotationError: 0.5
     animationPositionError: 0.5
     animationScaleError: 0.5
     animationWrapMode: 0
     extraExposedTransformPaths: []
+    extraUserProperties: []
     clipAnimations: []
     isReadable: 1
   meshes:
@@ -80,25 +191,55 @@ ModelImporter:
     globalScale: 1
     meshCompression: 0
     addColliders: 1
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 0
+    importVisibility: 0
     importBlendShapes: 1
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 0
+    fileIdsGeneration: 1
     swapUVChannels: 0
     generateSecondaryUV: 1
     useFileUnits: 1
-    optimizeMeshForGPU: 1
     keepQuads: 0
     weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
+    meshOptimizationFlags: -1
+    indexFormat: 1
     secondaryUVAngleDistortion: 8
     secondaryUVAreaDistortion: 15.000001
     secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 0
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
     secondaryUVPackMargin: 4
     useFileScale: 1
+    strictVertexDataChecks: 0
   tangentSpace:
     normalSmoothAngle: 60
     normalImportMode: 0
     tangentImportMode: 3
+    normalCalculationMode: 0
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 1
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 1
+  referencedClips: []
   importAnimation: 1
-  copyAvatar: 0
   humanDescription:
+    serializedVersion: 3
     human: []
     skeleton: []
     armTwist: 0.5
@@ -108,11 +249,19 @@ ModelImporter:
     armStretch: 0.05
     legStretch: 0.05
     feetSpacing: 0
+    globalScale: 1
     rootMotionBoneName: 
     hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 0
   lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 0
   humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 0
+  importBlendShapeDeformPercent: 0
+  remapMaterialsIfMaterialImportModeIsNone: 1
   additionalBone: 0
   userData: 
   assetBundleName: 
