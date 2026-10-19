@@ -6,8 +6,29 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Arrival.unity
+    guid: dadebbbd362714881b4e0a74a85b87cb
+  - enabled: 1
+    path: Assets/Scenes/Observatory.unity
+    guid: 779f4fd27929147e3ab98a6cb7b22127
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/Scenes/Seasons.unity
+    guid: a17e03b87b57d384f91323577256592c
+  - enabled: 1
+    path: Assets/Scenes/OrbitalModel.unity
+    guid: 5eb69099aee3f5640b95fefa491e8b8f
+  - enabled: 1
+    path: Assets/Scenes/S1View.unity
+    guid: 9881af32f3491954d80b9e84ab39569c
+  - enabled: 1
+    path: Assets/Scenes/S2View.unity
+    guid: b8a87ec77f4bb8a418fff82ee909430d
+  - enabled: 1
+    path: Assets/Scenes/S3View.unity
+    guid: bf9a9360af7002a4fbd37963e26178eb
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: c348712bda248c246b8c49b3db54643f, type: 3}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: cf25d6b0804374e9d8dc787bb1f7dd8c, type: 2}
