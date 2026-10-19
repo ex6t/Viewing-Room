@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
@@ -17,12 +18,10 @@ public class ObservatoryModelDisplay : MonoBehaviour
     public Material starsMaterial;
     public int groundLayer = 13;
     public int modelLayer = 12;
-    public float spaceMetresPerAU = 12f;
-    public float spaceEarthRadius = 1f;
-    public float spaceSunRadius = 3.6f;
-    public float spaceOrbitWidth = 0.025f;
-    public Transform[] seasonMarkers;
-    public TMP_Text[] seasonLabels;
+    public GameObject spaceStation;
+    public float spaceMetresPerAU = 70f;
+    public float spaceEarthRadius = 1.01f;
+    public float spaceSunRadius = 15.14625f;
     public RenderTexture Texture { get; private set; }
     public bool IsSpaceView { get; private set; }
 
@@ -38,9 +37,8 @@ public class ObservatoryModelDisplay : MonoBehaviour
     Vector3 originalPosition, originalScale;
     Quaternion originalRotation;
     Vector3 originalEarthScale, originalSunScale, originalMarkerScale;
-    float originalMetresPerAU, originalGlobeRadius, originalOrbitWidth;
+    float originalMetresPerAU, originalGlobeRadius;
     bool originalOrbitVisible;
-    double springAnomaly;
 
     void Awake()
     {
@@ -66,6 +64,20 @@ public class ObservatoryModelDisplay : MonoBehaviour
             groundCamera.cullingMask = 1 << groundLayer;
             groundCamera.clearFlags = CameraClearFlags.Skybox;
         }
+        if (spaceStation != null)
+        {
+            // The station keeps its own fill light while California passes into night.
+            var stationLight = new SphericalHarmonicsL2();
+            stationLight.AddAmbientLight(new Color(0.48f, 0.55f, 0.62f));
+            var lighting = new MaterialPropertyBlock();
+            foreach (var renderer in spaceStation.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                renderer.lightProbeUsage = LightProbeUsage.CustomProvided;
+                renderer.GetPropertyBlock(lighting);
+                lighting.CopySHCoefficientArraysFrom(new[] { stationLight });
+                renderer.SetPropertyBlock(lighting);
+            }
+        }
         SetVisible(false);
     }
 
@@ -75,7 +87,6 @@ public class ObservatoryModelDisplay : MonoBehaviour
         // Express the inherited celestial cube in the model's orbital frame.
         Bergers.BergerSol.CalculateOrbitalParameters(EarthOrbitModel.ReferenceYear, out _, out _, out double longitude);
         float angle = (float)((180.0 - longitude) * Mathf.Deg2Rad);
-        springAnomaly = 180.0 - longitude;
         Vector3 spring = new Vector3(-Mathf.Cos(angle), 0f, -Mathf.Sin(angle));
         Vector3 north = observation.AxisDirectionLocal;
         Vector3 east = Vector3.Cross(north, spring).normalized;
@@ -116,7 +127,6 @@ public class ObservatoryModelDisplay : MonoBehaviour
             originalMetresPerAU = orbit.metresPerAU;
             originalGlobeRadius = observation.globeRadius;
             originalOrbitVisible = orbit.orbitPath.enabled;
-            originalOrbitWidth = orbit.orbitPath.widthMultiplier;
             previousCameraMask = playerCamera.cullingMask;
             previousClearFlags = playerCamera.clearFlags;
             // Capture the settled headset position once; tracking/recentering may finish after Start.
@@ -138,11 +148,10 @@ public class ObservatoryModelDisplay : MonoBehaviour
             Vector3 forward = Vector3.ProjectOnPlane(playerCamera.transform.forward, Vector3.up).normalized;
             if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
             Quaternion viewingRotation = Quaternion.LookRotation(forward, Vector3.up);
-            // Show the complete orbit from above its edge, with winter Earth in the foreground.
-            // Work from the orbital frame so nested model transforms cannot reverse the tilt.
+            // Keep the inherited HubStation view level, with Earth closer than the Sun.
+            // A small horizontal offset keeps the two bodies from covering each other.
             Quaternion relativeOrbit = Quaternion.Inverse(modelRoot.rotation) * orbit.orbitPlane.rotation;
-            modelRoot.rotation = viewingRotation * Quaternion.Euler(18f, 0f, 0f) *
-                Quaternion.Euler(0f, 10f, 0f) * Quaternion.Inverse(relativeOrbit);
+            modelRoot.rotation = viewingRotation * Quaternion.Euler(0f, 100f, 0f) * Quaternion.Inverse(relativeOrbit);
             float sunRadius = orbit.sun.GetComponent<MeshFilter>().sharedMesh.bounds.extents.x * Mathf.Abs(orbit.sun.lossyScale.x);
             float earthRadius = observation.globeRenderer.GetComponent<MeshFilter>().sharedMesh.bounds.extents.x *
                 Mathf.Abs(observation.globeRenderer.transform.lossyScale.x);
@@ -151,12 +160,17 @@ public class ObservatoryModelDisplay : MonoBehaviour
             observation.observerMarker.localScale = originalMarkerScale * (spaceEarthRadius / originalGlobeRadius);
             observation.globeRadius = spaceEarthRadius;
             orbit.SetDisplayScale(spaceMetresPerAU);
-            orbit.orbitPath.widthMultiplier = spaceOrbitWidth;
-            orbit.orbitPath.enabled = true;
+            orbit.orbitPath.enabled = false;
             Vector3 right = Vector3.Cross(Vector3.up, forward);
-            Vector3 sunPosition = playerCamera.transform.position + forward * 24f - right * 1.5f + Vector3.up * 2f;
+            Vector3 feet = playerCamera.transform.position;
+            feet.y = playerCamera.transform.root.position.y;
+            Vector3 sunPosition = feet + forward * 85f + right * 4f;
             modelRoot.position += sunPosition - orbit.sun.position;
-            SetSeasonMarkers(true);
+            if (spaceStation != null)
+            {
+                spaceStation.transform.SetPositionAndRotation(feet, viewingRotation);
+                spaceStation.SetActive(true);
+            }
         }
         else
         {
@@ -176,11 +190,10 @@ public class ObservatoryModelDisplay : MonoBehaviour
                 if (orbit.sun != null && orbit.earth != null && orbit.orbitPath != null)
                 {
                     orbit.SetDisplayScale(originalMetresPerAU);
-                    orbit.orbitPath.widthMultiplier = originalOrbitWidth;
                     orbit.orbitPath.enabled = originalOrbitVisible;
                 }
             }
-            SetSeasonMarkers(false);
+            if (spaceStation != null) spaceStation.SetActive(false);
             if (playerCamera != null)
             {
                 playerCamera.cullingMask = previousCameraMask;
@@ -209,37 +222,10 @@ public class ObservatoryModelDisplay : MonoBehaviour
 
     void OnEnable() { ApplyVisibility(); }
 
-    void SetSeasonMarkers(bool visible)
-    {
-        if (seasonMarkers == null) return;
-        for (int i = 0; i < seasonMarkers.Length; i++)
-        {
-            if (seasonMarkers[i] == null) continue;
-            // Solar longitudes 0, 90, 180 and 270 degrees define the equinoxes and solstices.
-            if (visible)
-            {
-                seasonMarkers[i].localPosition = observation.earthOrbit.PositionAtTrueAnomaly(springAnomaly + i * 90.0);
-                if (seasonLabels != null && i < seasonLabels.Length && seasonLabels[i] != null)
-                    seasonLabels[i].transform.localPosition = seasonMarkers[i].localPosition.normalized *
-                        (spaceMetresPerAU * 0.08f) + Vector3.up * 0.5f;
-            }
-            seasonMarkers[i].gameObject.SetActive(visible);
-        }
-    }
-
     void LateUpdate()
     {
         // Both cameras use the same fixed celestial frame, including when the window shows the ground.
         runtimeStars.SetMatrix("_WorldToStars", celestialFrame * Matrix4x4.Rotate(Quaternion.Inverse(observation.earthOrbit.orbitPlane.rotation)));
-        if (IsSpaceView && seasonLabels != null)
-            foreach (var label in seasonLabels)
-                if (label != null)
-                {
-                    label.transform.rotation = playerCamera.transform.rotation;
-                    // Keep distant orbital annotations readable without enlarging their reference ticks.
-                    float distance = Vector3.Distance(playerCamera.transform.position, label.transform.position);
-                    label.transform.localScale = Vector3.one * Mathf.Clamp(distance / 12f, 0.75f, 4f);
-                }
         if (!modelCamera.enabled) return;
         // Track the model's position, never the learner's head. The orbit itself is unchanged.
         Vector3 centre = (observation.earthOrbit.sun.position + observation.earthOrbit.earth.position) * 0.5f;
