@@ -21,7 +21,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
     public int modelLayer = 12;
     public GameObject spaceStation;
     public float spaceMetresPerAU = 70f;
-    public float spaceEarthRadius = 1.3f;
+    public float spaceEarthRadius = 6.551f;
     public float spaceSunRadius = 15.14625f;
     public RenderTexture Texture { get; private set; }
     public bool IsSpaceView { get; private set; }
@@ -162,7 +162,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
             // Keep the inherited HubStation view level, with Earth closer than the Sun.
             // Look farther around the daylight side while keeping both bodies visible.
             Quaternion relativeOrbit = Quaternion.Inverse(modelRoot.rotation) * orbit.orbitPlane.rotation;
-            modelRoot.rotation = viewingRotation * Quaternion.Euler(0f, 53.5f, 0f) * Quaternion.Inverse(relativeOrbit);
+            modelRoot.rotation = viewingRotation * Quaternion.Euler(0f, 20.46f, 0f) * Quaternion.Inverse(relativeOrbit);
             float sunRadius = orbit.sun.GetComponent<MeshFilter>().sharedMesh.bounds.extents.x * Mathf.Abs(orbit.sun.lossyScale.x);
             float earthRadius = observation.globeRenderer.GetComponent<MeshFilter>().sharedMesh.bounds.extents.x *
                 Mathf.Abs(observation.globeRenderer.transform.lossyScale.x);
@@ -175,7 +175,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
             Vector3 right = Vector3.Cross(Vector3.up, forward);
             Vector3 feet = playerCamera.transform.position;
             feet.y = playerCamera.transform.root.position.y;
-            Vector3 sunPosition = feet + forward * 64.23f - right * 35.6f;
+            Vector3 sunPosition = feet + forward * 68.758f - right * 36.559f;
             modelRoot.position += sunPosition - orbit.sun.position;
             if (spaceStation != null)
             {
@@ -229,7 +229,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
             }
         }
         IsSpaceView = space;
-        // Recalculate world directions and the tack after moving the model, without advancing time.
+        // Recalculate world directions and the pointer after moving the model, without advancing time.
         if (observation != null) observation.SetDays(observation.SimulationDays);
         ApplyVisibility();
     }

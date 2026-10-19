@@ -275,7 +275,7 @@ public class ObservatoryTour : MonoBehaviour
         viewFade.color = Color.black;
         CurrentStep = fromGround ? TourStep.Sky : TourStep.Earth;
         ShowView(fromGround);
-        ShowCaption(fromGround ? "Watch the same moment from Earth." : "The red pin marks California.", 8f);
+        ShowCaption(fromGround ? "Watch the same moment from Earth." : "The triangle points to California.", 8f);
         PlayLine(fromGround ? skyLine : earthLine);
         timeReady = false;
         controls.ResetInput();
