@@ -16,16 +16,18 @@ public class ObservatoryModelDisplay : MonoBehaviour
     public GameObject frame;
     public TMP_Text viewLabel;
     public Material starsMaterial;
+    public Material spaceSkyboxMaterial;
     public int groundLayer = 13;
     public int modelLayer = 12;
     public GameObject spaceStation;
     public float spaceMetresPerAU = 70f;
-    public float spaceEarthRadius = 1.01f;
+    public float spaceEarthRadius = 1.3f;
     public float spaceSunRadius = 15.14625f;
     public RenderTexture Texture { get; private set; }
     public bool IsSpaceView { get; private set; }
 
     Material runtimeStars;
+    Material runtimeSpaceSky;
     Matrix4x4 celestialFrame;
     bool requestedVisible;
     Skybox playerSkybox;
@@ -36,6 +38,8 @@ public class ObservatoryModelDisplay : MonoBehaviour
     CameraClearFlags previousClearFlags;
     Vector3 originalPosition, originalScale;
     Quaternion originalRotation;
+    Vector3 originalWindowPosition, originalWindowScale;
+    Quaternion originalWindowRotation;
     Vector3 originalEarthScale, originalSunScale, originalMarkerScale;
     float originalMetresPerAU, originalGlobeRadius;
     bool originalOrbitVisible;
@@ -55,6 +59,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
         modelCamera.stereoTargetEye = StereoTargetEyeMask.None;
         modelCamera.GetUniversalAdditionalCameraData().allowXRRendering = false;
         runtimeStars = new Material(starsMaterial);
+        if (spaceSkyboxMaterial != null) runtimeSpaceSky = new Material(spaceSkyboxMaterial);
         modelCamera.GetComponent<Skybox>().material = runtimeStars;
         if (groundCamera != null)
         {
@@ -116,10 +121,13 @@ public class ObservatoryModelDisplay : MonoBehaviour
         if (space == IsSpaceView) return;
         if (space)
         {
-            if (!isActiveAndEnabled || playerCamera == null || groundCamera == null || modelRoot == null) return;
+            if (!isActiveAndEnabled || playerCamera == null || groundCamera == null || modelRoot == null || frame == null) return;
             originalPosition = modelRoot.localPosition;
             originalRotation = modelRoot.localRotation;
             originalScale = modelRoot.localScale;
+            originalWindowPosition = frame.transform.localPosition;
+            originalWindowRotation = frame.transform.localRotation;
+            originalWindowScale = frame.transform.localScale;
             var orbit = observation.earthOrbit;
             originalEarthScale = observation.globeSpin.localScale;
             originalSunScale = orbit.sun.localScale;
@@ -140,7 +148,10 @@ public class ObservatoryModelDisplay : MonoBehaviour
             }
             previousPlayerSky = playerSkybox.material;
             previousSkyboxEnabled = playerSkybox.enabled;
-            playerSkybox.material = runtimeStars;
+            playerSkybox.material = runtimeSpaceSky != null ? runtimeSpaceSky : runtimeStars;
+            if (runtimeSpaceSky != null)
+                // Face the inherited red nebula as it appears from the original station's 270-degree view.
+                runtimeSpaceSky.SetFloat("_Rotation", spaceSkyboxMaterial.GetFloat("_Rotation") + playerCamera.transform.eulerAngles.y - 270f);
             playerSkybox.enabled = true;
             playerCamera.clearFlags = CameraClearFlags.Skybox;
             playerCamera.cullingMask = (previousCameraMask & ~(1 << groundLayer)) | (1 << modelLayer);
@@ -151,7 +162,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
             // Keep the inherited HubStation view level, with Earth closer than the Sun.
             // A small horizontal offset keeps the two bodies from covering each other.
             Quaternion relativeOrbit = Quaternion.Inverse(modelRoot.rotation) * orbit.orbitPlane.rotation;
-            modelRoot.rotation = viewingRotation * Quaternion.Euler(0f, 100f, 0f) * Quaternion.Inverse(relativeOrbit);
+            modelRoot.rotation = viewingRotation * Quaternion.Euler(0f, 70.5f, 0f) * Quaternion.Inverse(relativeOrbit);
             float sunRadius = orbit.sun.GetComponent<MeshFilter>().sharedMesh.bounds.extents.x * Mathf.Abs(orbit.sun.lossyScale.x);
             float earthRadius = observation.globeRenderer.GetComponent<MeshFilter>().sharedMesh.bounds.extents.x *
                 Mathf.Abs(observation.globeRenderer.transform.lossyScale.x);
@@ -164,13 +175,19 @@ public class ObservatoryModelDisplay : MonoBehaviour
             Vector3 right = Vector3.Cross(Vector3.up, forward);
             Vector3 feet = playerCamera.transform.position;
             feet.y = playerCamera.transform.root.position.y;
-            Vector3 sunPosition = feet + forward * 85f + right * 4f;
+            Vector3 sunPosition = feet + forward * 74f - right * 18f;
             modelRoot.position += sunPosition - orbit.sun.position;
             if (spaceStation != null)
             {
-                spaceStation.transform.SetPositionAndRotation(feet, viewingRotation);
+                // Move the deck behind the fixed XR viewpoint to stand near its forward edge.
+                spaceStation.transform.SetPositionAndRotation(feet - forward * 3f, viewingRotation);
                 spaceStation.SetActive(true);
             }
+            // Keep the sky as a small side monitor, below the Sun and Earth.
+            Vector3 monitorOffset = forward * 1.6f - right * 0.9f;
+            frame.transform.SetPositionAndRotation(playerCamera.transform.position + monitorOffset - Vector3.up * 0.75f,
+                Quaternion.LookRotation(monitorOffset.normalized, Vector3.up) * Quaternion.Euler(40f, 0f, 0f));
+            frame.transform.localScale = originalWindowScale * 0.38f;
         }
         else
         {
@@ -194,6 +211,12 @@ public class ObservatoryModelDisplay : MonoBehaviour
                 }
             }
             if (spaceStation != null) spaceStation.SetActive(false);
+            if (frame != null)
+            {
+                frame.transform.localPosition = originalWindowPosition;
+                frame.transform.localRotation = originalWindowRotation;
+                frame.transform.localScale = originalWindowScale;
+            }
             if (playerCamera != null)
             {
                 playerCamera.cullingMask = previousCameraMask;
@@ -246,5 +269,6 @@ public class ObservatoryModelDisplay : MonoBehaviour
         if (addedPlayerSkybox && playerSkybox != null) Destroy(playerSkybox);
         if (Texture != null) { Texture.Release(); Destroy(Texture); }
         if (runtimeStars != null) Destroy(runtimeStars);
+        if (runtimeSpaceSky != null) Destroy(runtimeSpaceSky);
     }
 }

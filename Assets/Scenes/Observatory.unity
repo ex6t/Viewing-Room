@@ -15556,11 +15556,12 @@ MonoBehaviour:
   frame: {fileID: 401774757}
   viewLabel: {fileID: 1291706799}
   starsMaterial: {fileID: 2100000, guid: 24ec9f96f3b92453ebcc02ddd398352e, type: 2}
+  spaceSkyboxMaterial: {fileID: 2100000, guid: 8401881fcb9afd34eb383fc90bbbbddc, type: 2}
   groundLayer: 13
   modelLayer: 12
   spaceStation: {fileID: 922494008}
   spaceMetresPerAU: 70
-  spaceEarthRadius: 1.01
+  spaceEarthRadius: 1.3
   spaceSunRadius: 15.146276
 --- !u!1001 &2029259707
 PrefabInstance:
