@@ -160,9 +160,9 @@ public class ObservatoryModelDisplay : MonoBehaviour
             if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
             Quaternion viewingRotation = Quaternion.LookRotation(forward, Vector3.up);
             // Keep the inherited HubStation view level, with Earth closer than the Sun.
-            // A small horizontal offset keeps the two bodies from covering each other.
+            // Look farther around the daylight side while keeping both bodies visible.
             Quaternion relativeOrbit = Quaternion.Inverse(modelRoot.rotation) * orbit.orbitPlane.rotation;
-            modelRoot.rotation = viewingRotation * Quaternion.Euler(0f, 70.5f, 0f) * Quaternion.Inverse(relativeOrbit);
+            modelRoot.rotation = viewingRotation * Quaternion.Euler(0f, 53.5f, 0f) * Quaternion.Inverse(relativeOrbit);
             float sunRadius = orbit.sun.GetComponent<MeshFilter>().sharedMesh.bounds.extents.x * Mathf.Abs(orbit.sun.lossyScale.x);
             float earthRadius = observation.globeRenderer.GetComponent<MeshFilter>().sharedMesh.bounds.extents.x *
                 Mathf.Abs(observation.globeRenderer.transform.lossyScale.x);
@@ -175,7 +175,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
             Vector3 right = Vector3.Cross(Vector3.up, forward);
             Vector3 feet = playerCamera.transform.position;
             feet.y = playerCamera.transform.root.position.y;
-            Vector3 sunPosition = feet + forward * 74f - right * 18f;
+            Vector3 sunPosition = feet + forward * 64.23f - right * 35.6f;
             modelRoot.position += sunPosition - orbit.sun.position;
             if (spaceStation != null)
             {
