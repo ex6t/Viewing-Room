@@ -222,7 +222,7 @@ public class ObservatoryTour : MonoBehaviour
         }
         viewFade.color = Color.black;
         modelDisplay.SetSpaceView(!modelDisplay.IsSpaceView);
-        ShowCaption(modelDisplay.IsSpaceView ? "Same moment. A view from space." : "The same sky in California.", 6f);
+        ShowCaption(modelDisplay.IsSpaceView ? "A winter day, seen from space." : "The same sky in California.", 6f);
         if (modelDisplay.IsSpaceView)
         {
             PlayLine(spaceLine);

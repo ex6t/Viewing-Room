@@ -121,11 +121,26 @@ public class EarthOrbitModel : MonoBehaviour
     // +X is perihelion; phase is elapsed time since perihelion, not a calendar date.
     public Vector3 PositionAtDays(double days)
     {
-        double angle = TrueAnomalyAtDays(days) * Math.PI / 180.0;
+        return PositionAtTrueAnomaly(TrueAnomalyAtDays(days));
+    }
+
+    // Orbital landmarks use the same focus-centred ellipse as the moving Earth.
+    public Vector3 PositionAtTrueAnomaly(double anomalyDegrees)
+    {
+        double angle = anomalyDegrees * Math.PI / 180.0;
         double radiusAU = SemiMajorAxisAU * (1.0 - Eccentricity * Eccentricity) /
             (1.0 + Eccentricity * Math.Cos(angle));
         return new Vector3((float)(radiusAU * Math.Cos(angle) * metresPerAU), 0f,
             (float)(radiusAU * Math.Sin(angle) * metresPerAU));
+    }
+
+    // Change the teaching display's metres per AU, never its orbital elements or clock.
+    public void SetDisplayScale(float scale)
+    {
+        if (float.IsNaN(scale) || float.IsInfinity(scale) || scale <= 0f || !InitializeModel()) return;
+        metresPerAU = scale;
+        DrawOrbit();
+        UpdatePosition();
     }
 
     void UpdatePosition()
