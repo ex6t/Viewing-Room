@@ -29,6 +29,7 @@ public class ObservatoryTour : MonoBehaviour
     public AudioClip skyLine;
     public AudioClip earthLine;
     public AudioClip nextLine;
+    public AudioClip spaceLine;
     public float automaticHoursPerSecond = 0.5f;
     public string seasonsScene = "Assets/Scenes/Seasons.unity";
 
@@ -134,7 +135,8 @@ public class ObservatoryTour : MonoBehaviour
             nextClock = Time.unscaledTimeAsDouble + 0.1;
         }
         caption.enabled = Time.unscaledTime < captionUntil;
-        string nextAction = CurrentStep == TourStep.Sky ? "A: see Earth" : "A: continue   B: sky";
+        string nextAction = CurrentStep == TourStep.Sky ? "A: see Earth" :
+            "R grip: " + (modelDisplay.IsSpaceView ? "sky" : "space") + "   A: next   B: back";
         bool introduceTime = !usedTime && CurrentStep == TourStep.Sky;
         hint.text = introduceTime ? "Left stick: time   " + nextAction : nextAction;
         float glow = introduceTime ? 0.3f + 0.3f * Mathf.Sin(Time.unscaledTime * 3f) : 0f;
@@ -203,12 +205,54 @@ public class ObservatoryTour : MonoBehaviour
         RefreshClock();
     }
 
+    public void ToggleView()
+    {
+        if (!IsPresenting || IsTransitioning || welcome.IsShowing || CurrentStep != TourStep.Earth) return;
+        transition = StartCoroutine(SwapPerspective());
+    }
+
+    IEnumerator SwapPerspective()
+    {
+        observation.SetSuspended(true);
+        viewFade.gameObject.SetActive(true);
+        for (float t = 0f; t < 0.25f; t += Time.unscaledDeltaTime)
+        {
+            viewFade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(t / 0.25f));
+            yield return null;
+        }
+        viewFade.color = Color.black;
+        modelDisplay.SetSpaceView(!modelDisplay.IsSpaceView);
+        ShowCaption(modelDisplay.IsSpaceView ? "Same moment. A view from space." : "The same sky in California.", 6f);
+        if (modelDisplay.IsSpaceView)
+        {
+            PlayLine(spaceLine);
+            HoldForLine(3f);
+        }
+        else
+        {
+            if (voice != null) voice.Stop();
+            holdUntil = Time.unscaledTime + 3f;
+        }
+        timeReady = false;
+        controls.ResetInput();
+        RefreshClock();
+        for (float t = 0f; t < 0.25f; t += Time.unscaledDeltaTime)
+        {
+            viewFade.color = new Color(0f, 0f, 0f, 1f - Mathf.Clamp01(t / 0.25f));
+            yield return null;
+        }
+        ClearFade();
+        observation.SetSuspended(false);
+        transition = null;
+    }
+
     public void ResetOrGoBack()
     {
         if (IsTransitioning || welcome.IsShowing) return;
         if (CurrentStep == TourStep.Complete) { hasResume = false; StartGuidedTour(); }
         else if (!IsPresenting) return;
         else if (CurrentStep == TourStep.Introduction) return;
+        else if (modelDisplay.IsSpaceView) ToggleView();
         else if (CurrentStep == TourStep.Earth) transition = StartCoroutine(ChangeView(true));
         else
         {
@@ -231,7 +275,7 @@ public class ObservatoryTour : MonoBehaviour
         viewFade.color = Color.black;
         CurrentStep = fromGround ? TourStep.Sky : TourStep.Earth;
         ShowView(fromGround);
-        ShowCaption(fromGround ? "Watch the same moment from Earth." : "You're at the blue dot.", 8f);
+        ShowCaption(fromGround ? "Watch the same moment from Earth." : "The red pin marks California.", 8f);
         PlayLine(fromGround ? skyLine : earthLine);
         timeReady = false;
         controls.ResetInput();
@@ -301,6 +345,7 @@ public class ObservatoryTour : MonoBehaviour
 
     void ShowView(bool fromGround)
     {
+        modelDisplay.SetSpaceView(false);
         groundView.SetActive(true); // The local sky remains visible beside its Earth explanation.
         modelView.SetActive(!fromGround);
         modelDisplay.SetVisible(!fromGround);

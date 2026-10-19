@@ -9,7 +9,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
     public InputActionProperty continueInput; // A / Return
     public InputActionProperty selectInput; // X: pause / play.
     public InputActionProperty replayInput; // B: reset time / go back.
-    public InputActionProperty narrationInput; // Retained binding for the later Kepler recording.
+    public InputActionProperty narrationInput; // Observatory: right grip / V swaps sky and space.
     public InputActionProperty modeInput; // Y / M: mode selection in the previous room only.
     public InputActionReference navigationInput; // Left stick: time; left/right arrows in Editor.
 
@@ -20,6 +20,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
     bool previousSelect = true;
     bool previousReplay = true;
     bool previousMode = true;
+    bool previousView = true;
     bool previousLeft = true;
     bool previousRight = true;
 
@@ -50,6 +51,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
         bool select = selectInput.action.IsPressed();
         bool replay = replayInput.action.IsPressed();
         bool modes = observatoryTour == null && modeInput.action != null && modeInput.action.IsPressed();
+        bool view = observatoryTour != null && narrationInput.action != null && narrationInput.action.IsPressed();
         float horizontal = navigationInput.action.ReadValue<Vector2>().x;
         bool left = horizontal < -0.6f || (Keyboard.current != null && Keyboard.current.leftArrowKey.isPressed);
         bool right = horizontal > 0.6f || (Keyboard.current != null && Keyboard.current.rightArrowKey.isPressed);
@@ -59,6 +61,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
             if (replay && !previousReplay) observatoryTour.ResetOrGoBack();
             else if (confirm && !previousContinue) observatoryTour.ContinueLesson();
             else if (select && !previousSelect) observatoryTour.Interact();
+            else if (view && !previousView) observatoryTour.ToggleView();
         }
         else if (modes && !previousMode && lesson.CurrentStep != ViewingRoomLesson.LessonStep.Ready) lesson.OpenModes();
         else if (replay && !previousReplay) lesson.ResetOrGoBack();
@@ -71,6 +74,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
         previousSelect = select;
         previousReplay = replay;
         previousMode = modes;
+        previousView = view;
         previousLeft = left;
         previousRight = right;
     }
@@ -91,6 +95,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
     public void ResetInput()
     {
         previousContinue = previousSelect = previousReplay = previousMode = previousLeft = previousRight = true;
+        previousView = true;
     }
 
     void OnDisable()
