@@ -17,6 +17,7 @@ public class ObservatoryTour : MonoBehaviour
     public GameObject groundView;
     public GameObject modelView;
     public ObservatoryModelDisplay modelDisplay;
+    public ObservatorySunPath sunPath;
     public Light modelLight;
     public Canvas captionCanvas;
     public TMP_Text caption;
@@ -139,6 +140,9 @@ public class ObservatoryTour : MonoBehaviour
             "R grip: " + (modelDisplay.IsSpaceView ? "sky" : "space") + "   A: next   B: back";
         bool introduceTime = !usedTime && CurrentStep == TourStep.Sky;
         hint.text = introduceTime ? "Left stick: time   " + nextAction : nextAction;
+        if (sunPath != null)
+            hint.text += "\nY: path " + (sunPath.IsPathVisible ? "off" : "on") +
+                (sunPath.IsPathVisible ? "   L grip: terrain " + (sunPath.IsTerrainHidden ? "on" : "off") : "");
         float glow = introduceTime ? 0.3f + 0.3f * Mathf.Sin(Time.unscaledTime * 3f) : 0f;
         hint.color = Color.Lerp(hintColor, new Color(0.35f, 1f, 0.95f), glow);
     }
@@ -209,6 +213,26 @@ public class ObservatoryTour : MonoBehaviour
     {
         if (!IsPresenting || IsTransitioning || welcome.IsShowing || CurrentStep != TourStep.Earth) return;
         transition = StartCoroutine(SwapPerspective());
+    }
+
+    public void ToggleSunPath()
+    {
+        if (!CanChangeSunPath()) return;
+        sunPath.TogglePath();
+        ShowCaption(sunPath.IsPathVisible ? "Gold: the Sun's daily path." : "Sun path hidden.", 6f);
+    }
+
+    public void ToggleTerrain()
+    {
+        if (!CanChangeSunPath() || !sunPath.IsPathVisible) return;
+        sunPath.ToggleTerrain();
+        ShowCaption(sunPath.IsTerrainHidden ? "Blue: below horizon. Diagram view." : "Terrain restored.", 7f);
+    }
+
+    bool CanChangeSunPath()
+    {
+        return sunPath != null && IsPresenting && !IsTransitioning && !welcome.IsShowing &&
+            (CurrentStep == TourStep.Sky || CurrentStep == TourStep.Earth);
     }
 
     IEnumerator SwapPerspective()
@@ -293,6 +317,7 @@ public class ObservatoryTour : MonoBehaviour
 
     void Finish()
     {
+        if (sunPath != null) sunPath.SetAvailable(false);
         CurrentStep = TourStep.Complete;
         IsPresenting = false;
         hasResume = false;
@@ -345,6 +370,7 @@ public class ObservatoryTour : MonoBehaviour
 
     void ShowView(bool fromGround)
     {
+        if (sunPath != null) sunPath.SetAvailable(CurrentStep == TourStep.Sky || CurrentStep == TourStep.Earth);
         modelDisplay.SetSpaceView(false);
         groundView.SetActive(true); // The local sky remains visible beside its Earth explanation.
         modelView.SetActive(!fromGround);
@@ -370,7 +396,7 @@ public class ObservatoryTour : MonoBehaviour
             captionCanvas.transform.SetPositionAndRotation(displayAnchor.position, displayAnchor.rotation);
         else captionCanvas.transform.SetPositionAndRotation(eye + forward * 2.8f - right * 1.45f - Vector3.up * 0.73f,
             Quaternion.LookRotation((forward * 2.8f - right * 1.45f).normalized));
-        clockStand.SetPositionAndRotation(captionCanvas.transform.position - Vector3.up * 0.26f, captionCanvas.transform.rotation);
+        clockStand.SetPositionAndRotation(captionCanvas.transform.position - Vector3.up * 0.36f, captionCanvas.transform.rotation);
         if (observation.skyFrame != null && !skyPlaced)
         {
             Vector3 initialSun = Vector3.ProjectOnPlane(observation.SunDirectionLocal, Vector3.up).normalized;
@@ -454,6 +480,7 @@ public class ObservatoryTour : MonoBehaviour
 
     void OnDisable()
     {
+        if (sunPath != null) sunPath.SetAvailable(false);
         if (IsPresenting) { resumeStep = CurrentStep; hasResume = true; }
         CancelTransition();
         if (observation != null) observation.SetSuspended(true);
