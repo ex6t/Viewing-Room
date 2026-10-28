@@ -37,3 +37,11 @@ Checked on October 27, 2026 in Unity 6000.5.10f1:
 - The updated sky shader compiled for Android GLES3 and Vulkan. The full seven-scene Android IL2CPP ARM64 APK build succeeded with 0 errors and 27 warnings in 2 minutes 7 seconds. APK archive integrity and ARM64 native libraries were verified.
 
 Validation used the local scene with the user's existing uncommitted edits retained; those edits are excluded from the commit. The clean Play Mode run captured no gameplay exceptions. Unity emitted graphics API environment-cache diagnostics at first entry; imported package/deprecation warnings remain. Physical Quest 3 testing remains a separate acceptance step for binocular readability, controller mapping, comfort and device performance.
+
+## Sky monitor clearance correction
+
+After restarting Unity with Meta XR Simulator, the reported headset height could be zero in floor tracking mode. The old placement put the monitor 75 cm below the camera, which placed the entire canvas under the station floor. A station-mesh intersection confirmed that the deck blocked it.
+
+The space-view placement now checks all four canvas corners and raises the monitor only when needed to keep its lowest corner at least 25 cm above the deck origin. Normal standing placement is unchanged. The tracked camera, station, scientific model and scene assets are unchanged.
+
+Unity Editor validation passed 336 checks: eight reported head heights from 0 to 2.2 m, three space/sky swaps at each height, whole-canvas deck clearance, view bounds, mesh occlusion, camera/time/pause preservation and exact restoration of the original canvas pose. The APK build reported above predates this small placement correction; the correction was validated in the Editor. The existing Metal memoryless-texture diagnostic remains unresolved.
