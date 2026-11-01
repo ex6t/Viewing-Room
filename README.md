@@ -20,10 +20,20 @@ Slim rear arches, a low terrace, hills and inherited nature props leave the outd
 | Move time forwards/backwards | Left stick right/left | Right/left arrows |
 | Pause / play automatic time | X | X |
 | Swap space / observatory during the Earth reveal | Right grip | V |
+| Show / hide the daily Sun path | Y | P |
+| Hide / restore terrain while the path is visible | Left grip | H |
 | Reset the day / return to sky / replay | B | B |
 | Snap turn | Right stick | XR input simulation |
 
-Time moves gently on its own. The left stick moves time even while playback is paused. Y and M do not open a menu. Travel stays paused during the guided chapter and its ending; A continues into Seasons and B replays the chapter. Tracked head movement and guided snap turning remain available. Opening Observatory directly in the Editor retains its introductory flow for development.
+Time moves gently on its own. The left stick moves time even while playback is paused. Y toggles the Sun path during observation; M does not open a menu. Travel stays paused during the guided chapter and its ending; A continues into Seasons and B replays the chapter. Tracked head movement and guided snap turning remain available. Opening Observatory directly in the Editor retains its introductory flow for development.
+
+## Sun path
+
+The Sun path starts hidden. Press Y (P in the Editor) to show a gold daily arc and a pale horizon guide. It uses the current California latitude and solar declination from `EarthObservationModel`, so the moving Sun stays on the arc as time changes. This is a full daily circle at the current declination, rather than a trail of previous positions. It follows the geometry in Kostadinov's [SolGeoVis v1.1, Section 2.2 and Figure 2](https://doi.org/10.5281/zenodo.16998081), also checked against the published `sun_path_v2.m`.
+
+Terrain stays visible when the path is enabled. Press left grip (H) to hide the landscape, deck and surrounding structures and reveal the dashed blue continuation below the mathematical horizon. The lower sky becomes a dark diagram view; its Sun and path do not represent a view through the physical Earth. A small standing reference remains visible. Only renderers are hidden: collisions, head tracking and locomotion settings are preserved. Press again to restore the exact previous renderer states. Hiding the path, ending the lesson or disabling the feature also restores terrain.
+
+The same path can appear in California's monitor during the space view. It never draws over the decorative space sky. Path and terrain controls preserve the simulation time and pause state, and work while paused. See [SUN_PATH.md](SUN_PATH.md) for the calculation and validation notes.
 
 ## Research and scope
 
@@ -39,4 +49,4 @@ The prototype reuses the inherited Earth, star skybox, robot, nature props, XR O
 
 Arrival and Observatory center the tracked view on their spawn point once the headset is ready. This moves the XR Origin, preserves headset height and local tracking, and leaves later head movement and locomotion free.
 
-The imported scenes reuse the compatible XR rig and have materials adapted for URP. The HubStation floor model explicitly uses its textured floor and trim materials. The inherited Sun uses its original surface texture with a self-lit URP material so it stays bright independently of scene lights. Their inherited season timeline and illustrative scenery are retained; they are not yet reconciled with the observatory reference clock or validated as a SolGeoVis implementation. Sun-path comparisons, selectable locations, a refined seasons lesson, constellation selection and the changing-Sun chapter remain future work. The inherited project descends from [KellyLFrear/FALL2025-VR-Orbit-Simulation](https://github.com/KellyLFrear/FALL2025-VR-Orbit-Simulation); imported content retains its original ownership.
+The imported scenes reuse the compatible XR rig and have materials adapted for URP. The HubStation floor model explicitly uses its textured floor and trim materials. The inherited Sun uses its original surface texture with a self-lit URP material so it stays bright independently of scene lights. Their inherited season timeline and illustrative scenery are retained; they are not yet reconciled with the observatory reference clock or validated as a SolGeoVis implementation. Seasonal Sun-path comparisons, selectable locations, a refined seasons lesson, constellation selection and the changing-Sun chapter remain future work. The inherited project descends from [KellyLFrear/FALL2025-VR-Orbit-Simulation](https://github.com/KellyLFrear/FALL2025-VR-Orbit-Simulation); imported content retains its original ownership.

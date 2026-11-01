@@ -12,6 +12,8 @@ public class ViewingRoomLessonInput : MonoBehaviour
     public InputActionProperty narrationInput; // Observatory: right grip / V swaps sky and space.
     public InputActionProperty modeInput; // Y / M: mode selection in the previous room only.
     public InputActionReference navigationInput; // Left stick: time; left/right arrows in Editor.
+    public InputActionProperty sunPathInput; //y / p: show the Sun path in Observatory
+    public InputActionProperty terrainInput; //left grip / H: see below the horizon
 
     public bool IsConfigured => (lesson != null || observatoryTour != null) && continueInput.action != null && selectInput.action != null &&
         replayInput.action != null && narrationInput.action != null && (observatoryTour != null || modeInput.action != null) && navigationInput != null;
@@ -23,6 +25,8 @@ public class ViewingRoomLessonInput : MonoBehaviour
     bool previousView = true;
     bool previousLeft = true;
     bool previousRight = true;
+    bool previousSunPath = true;
+    bool previousTerrain = true;
 
     public void EnableInput()
     {
@@ -30,6 +34,11 @@ public class ViewingRoomLessonInput : MonoBehaviour
         selectInput.action?.Enable();
         replayInput.action?.Enable();
         narrationInput.action?.Enable();
+        if (observatoryTour != null)
+        {
+            sunPathInput.action?.Enable();
+            terrainInput.action?.Enable();
+        }
         if (observatoryTour == null) modeInput.action?.Enable();
         ResetInput();
     }
@@ -41,6 +50,8 @@ public class ViewingRoomLessonInput : MonoBehaviour
         replayInput.action?.Disable();
         narrationInput.action?.Disable();
         modeInput.action?.Disable();
+        sunPathInput.action?.Disable();
+        terrainInput.action?.Disable();
     }
 
     // Called by the lesson after its automatic transitions, avoiding Update-order surprises.
@@ -52,6 +63,8 @@ public class ViewingRoomLessonInput : MonoBehaviour
         bool replay = replayInput.action.IsPressed();
         bool modes = observatoryTour == null && modeInput.action != null && modeInput.action.IsPressed();
         bool view = observatoryTour != null && narrationInput.action != null && narrationInput.action.IsPressed();
+        bool path = observatoryTour != null && sunPathInput.action != null && sunPathInput.action.IsPressed();
+        bool terrain = observatoryTour != null && terrainInput.action != null && terrainInput.action.IsPressed();
         float horizontal = navigationInput.action.ReadValue<Vector2>().x;
         bool left = horizontal < -0.6f || (Keyboard.current != null && Keyboard.current.leftArrowKey.isPressed);
         bool right = horizontal > 0.6f || (Keyboard.current != null && Keyboard.current.rightArrowKey.isPressed);
@@ -62,6 +75,8 @@ public class ViewingRoomLessonInput : MonoBehaviour
             else if (confirm && !previousContinue) observatoryTour.ContinueLesson();
             else if (select && !previousSelect) observatoryTour.Interact();
             else if (view && !previousView) observatoryTour.ToggleView();
+            else if (path && !previousSunPath) observatoryTour.ToggleSunPath();
+            else if (terrain && !previousTerrain) observatoryTour.ToggleTerrain();
         }
         else if (modes && !previousMode && lesson.CurrentStep != ViewingRoomLesson.LessonStep.Ready) lesson.OpenModes();
         else if (replay && !previousReplay) lesson.ResetOrGoBack();
@@ -77,6 +92,8 @@ public class ViewingRoomLessonInput : MonoBehaviour
         previousView = view;
         previousLeft = left;
         previousRight = right;
+        previousSunPath = path;
+        previousTerrain = terrain;
     }
 
     public float ReadTimeDirection()
@@ -96,6 +113,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
     {
         previousContinue = previousSelect = previousReplay = previousMode = previousLeft = previousRight = true;
         previousView = true;
+        previousSunPath = previousTerrain = true;
     }
 
     void OnDisable()
@@ -110,5 +128,7 @@ public class ViewingRoomLessonInput : MonoBehaviour
         if (replayInput.reference == null) replayInput.action?.Dispose();
         if (narrationInput.reference == null) narrationInput.action?.Dispose();
         if (modeInput.reference == null) modeInput.action?.Dispose();
+        if (sunPathInput.reference == null) sunPathInput.action?.Dispose();
+        if (terrainInput.reference == null) terrainInput.action?.Dispose();
     }
 }

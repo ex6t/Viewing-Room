@@ -15,6 +15,10 @@ Shader "Viewing Room/Observatory Sky"
         [HDR] _SunColor("Sun Color", Color) = (3.8, 2.9, 1.7, 1)
         _SunRadiusDegrees("Sun Angular Radius", Range(0.1, 1)) = 0.266
         _HaloStrength("Sun Halo", Range(0, 1)) = 0.15
+        _ShowSunPath("Show Daily Sun Path", Range(0, 1)) = 0
+        _ObserverLatitude("Observer Latitude (Radians)", Float) = 0
+        _SolarDeclination("Solar Declination (Radians)", Float) = 0
+        _RevealBelowHorizon("Reveal Below Horizon", Range(0, 1)) = 0
     }
 
     SubShader
@@ -60,6 +64,10 @@ Shader "Viewing Room/Observatory Sky"
                 float _GroundView;
                 float _SunRadiusDegrees;
                 float _HaloStrength;
+                float _ShowSunPath;
+                float _ObserverLatitude;
+                float _SolarDeclination;
+                float _RevealBelowHorizon;
             CBUFFER_END
 
             struct Attributes
@@ -127,6 +135,9 @@ Shader "Viewing Room/Observatory Sky"
                     (0.2 + 0.8 * towardSun * towardSun);
 
                 float aboveHorizon = smoothstep(-0.015, 0.02, localDirection.y);
+                float reveal = _ShowSunPath * _RevealBelowHorizon;
+                //below the horizon is a diagram view, with a darker background
+                groundSky = lerp(groundSky, half3(0.012, 0.022, 0.045), reveal * (1.0 - aboveHorizon));
                 float starsVisible = 1.0 - smoothstep(-0.18, 0.02, sunAltitude);
                 half3 stars = SAMPLE_TEXTURECUBE(_Stars, sampler_Stars, starDirection).rgb;
                 groundSky += stars * _StarsExposure * starsVisible * aboveHorizon;
@@ -137,7 +148,28 @@ Shader "Viewing Room/Observatory Sky"
                 float edgeWidth = max(fwidth(separation), 0.0000001);
                 float disc = 1.0 - smoothstep(discEdge - edgeWidth, discEdge + edgeWidth, separation);
                 float halo = saturate(1.0 - separation / 0.0015);
-                groundSky += _SunColor.rgb * (disc + halo * halo * _HaloStrength) * aboveHorizon;
+                groundSky += _SunColor.rgb * (disc + halo * halo * _HaloStrength) * lerp(aboveHorizon, 1.0, reveal);
+
+                if (_ShowSunPath > 0.5)
+                {
+                    //SolGeoVis v1.1 section 2.2: one daily circle at the current declination
+                    //our local frame is east, up, north; the pole is tilted by latitude
+                    float3 pole = float3(0.0, sin(_ObserverLatitude), cos(_ObserverLatitude));
+                    float pathAngle = asin(clamp(dot(localDirection, pole), -1.0, 1.0));
+                    float pathError = abs(pathAngle - _SolarDeclination);
+                    float pathWidth = max(fwidth(pathAngle), 0.0004);
+                    float path = 1.0 - smoothstep(0.0025, 0.0025 + pathWidth, pathError);
+                    float3 equator = float3(0.0, cos(_ObserverLatitude), -sin(_ObserverLatitude));
+                    float hourAngle = atan2(-localDirection.x, dot(localDirection, equator));
+                    //dashes and color both identify the part below the horizon
+                    float dash = step(0.35, frac((hourAngle + PI) * (48.0 / TWO_PI)));
+                    float below = step(localDirection.y, 0.0);
+                    float visiblePath = path * lerp(1.0, reveal * dash, below);
+                    half3 pathColor = lerp(half3(1.0, 0.76, 0.18), half3(0.3, 0.85, 1.0), below);
+                    groundSky = lerp(groundSky, pathColor, visiblePath);
+                    float horizon = 1.0 - smoothstep(0.0015, 0.0015 + max(fwidth(localDirection.y), 0.0004), abs(localDirection.y));
+                    groundSky = lerp(groundSky, half3(0.8, 0.92, 1.0), horizon);
+                }
 
                 // A uniform dark backdrop avoids implying a second celestial viewpoint
                 // when the same observer clock is shown through the enlarged Earth model.

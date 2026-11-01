@@ -43,6 +43,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
     Vector3 originalEarthScale, originalSunScale, originalMarkerScale;
     float originalMetresPerAU, originalGlobeRadius;
     bool originalOrbitVisible;
+    readonly Vector3[] monitorCorners = new Vector3[4];
 
     void Awake()
     {
@@ -188,6 +189,12 @@ public class ObservatoryModelDisplay : MonoBehaviour
             frame.transform.SetPositionAndRotation(playerCamera.transform.position + monitorOffset - Vector3.up * 0.75f,
                 Quaternion.LookRotation(monitorOffset.normalized, Vector3.up) * Quaternion.Euler(40f, 0f, 0f));
             frame.transform.localScale = originalWindowScale * 0.38f;
+            //keep the whole monitor above the deck when the simulator reports a low head pose
+            frame.GetComponent<RectTransform>().GetWorldCorners(monitorCorners);
+            float lowestCorner = monitorCorners[0].y;
+            for (int i = 1; i < monitorCorners.Length; i++)
+                lowestCorner = Mathf.Min(lowestCorner, monitorCorners[i].y);
+            frame.transform.position += Vector3.up * Mathf.Max(0f, feet.y + 0.25f - lowestCorner);
         }
         else
         {
