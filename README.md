@@ -27,6 +27,12 @@ Slim rear arches, a low terrace, hills and inherited nature props leave the outd
 
 Time moves gently on its own. The left stick moves time even while playback is paused. Y toggles the Sun path during observation; M does not open a menu. Travel stays paused during the guided chapter and its ending; A continues into Seasons and B replays the chapter. Tracked head movement and guided snap turning remain available. Opening Observatory directly in the Editor retains its introductory flow for development.
 
+## Rocket ascent
+
+Every trip from Earth to space starts a 30-second rocket-cabin prototype. Buildings fall away, clouds and an aircraft mark increasing height, then a curved Earth appears beneath a darkening sky. The cockpit stays fixed while natural head tracking remains active. Its dashboard shows altitude and a vertical 0-100 km scale. **X pauses/resumes the ascent; B cancels back to California.** Returning from space uses the short fade.
+
+This is a time-compressed teaching transition with approximate atmospheric layers. It ends at the conventional 100 km edge-of-space marker, followed by the existing enlarged Earth/Sun teaching display. It does not simulate entering orbit. The lesson's clock, pause state, Sun-path setting and terrain setting survive completion or cancellation. See [ROCKET_TRANSITION.md](ROCKET_TRANSITION.md) for setup and testing.
+
 ## Sun path
 
 The Sun path starts hidden. Press Y (P in the Editor) to show a gold daily arc and a pale horizon guide. It uses the current California latitude and solar declination from `EarthObservationModel`, so the moving Sun stays on the arc as time changes. This is a full daily circle at the current declination, rather than a trail of previous positions. It follows the geometry in Kostadinov's [SolGeoVis v1.1, Section 2.2 and Figure 2](https://doi.org/10.5281/zenodo.16998081), also checked against the published `sun_path_v2.m`.
