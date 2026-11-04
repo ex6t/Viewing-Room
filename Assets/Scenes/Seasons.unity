@@ -1027,7 +1027,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &219194528
 Transform:
   m_ObjectHideFlags: 0
@@ -1496,7 +1496,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &370823385
 Transform:
   m_ObjectHideFlags: 0
@@ -1894,7 +1894,7 @@ Transform:
   - {fileID: 1484791172}
   - {fileID: 1539681833}
   - {fileID: 705647825}
-  m_Father: {fileID: 1066110513}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!114 &483924701
 MonoBehaviour:
@@ -1915,7 +1915,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 483924699}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e2e91ea6e8b01224f968c906dd8b4ad8, type: 3}
   m_Name: 
@@ -1947,7 +1947,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 483924699}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5ba3249a1f32e2a41be5594b63ee45f2, type: 3}
   m_Name: 
@@ -2007,7 +2007,7 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
-  m_IsKinematic: 0
+  m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 112
   m_CollisionDetection: 3
@@ -2839,7 +2839,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &544732127
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3450,7 +3450,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &662847471
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5134,7 +5134,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &986200352
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5972,7 +5972,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1066110513
 Transform:
   m_ObjectHideFlags: 0
@@ -5992,7 +5992,6 @@ Transform:
   - {fileID: 2064855777}
   - {fileID: 8803021280703034962}
   - {fileID: 601549586}
-  - {fileID: 483924700}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!43 &1072486808
@@ -7611,7 +7610,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1297737906
 Transform:
   m_ObjectHideFlags: 0
@@ -7906,7 +7905,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1350380102
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7984,7 +7983,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1386713040
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8827,7 +8826,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1472143023
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9008,7 +9007,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1489022986}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e9f365cf844c03449bc8973eead2c3c1, type: 3}
   m_Name: 
@@ -9926,6 +9925,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 1349681854}
     m_Modifications:
     - target: {fileID: 81302424237362655, guid: 242cec6dc2cb9d14da271a9dca20176d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 81302424237362655, guid: 242cec6dc2cb9d14da271a9dca20176d, type: 3}
       propertyPath: m_Name
       value: Data Display
       objectReference: {fileID: 0}
@@ -10284,7 +10287,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1574405873
 Transform:
   m_ObjectHideFlags: 0
@@ -12060,7 +12063,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1816170133
 Transform:
   m_ObjectHideFlags: 0
@@ -14058,6 +14061,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 1349681854}
     m_Modifications:
     - target: {fileID: 81302424237362655, guid: 242cec6dc2cb9d14da271a9dca20176d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 81302424237362655, guid: 242cec6dc2cb9d14da271a9dca20176d, type: 3}
       propertyPath: m_Name
       value: Video Display
       objectReference: {fileID: 0}
@@ -14767,7 +14774,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7549666945957691126, guid: 8031e412f39d2eb45a9b1045dfa22534, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
@@ -14980,6 +14987,54 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8972194970c32ae4480e8a99f3faea59, type: 3}
+--- !u!1 &6376112834509601001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6376112834509601002}
+  - component: {fileID: 6376112834509601003}
+  m_Layer: 0
+  m_Name: Seasons Orbit Display
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6376112834509601002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6376112834509601001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: 85, y: 0, z: -0.033}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+--- !u!114 &6376112834509601003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6376112834509601001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d21d5f52538480ca7146783f217a941, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::SeasonsOrbitDisplay
+  playerCamera: {fileID: 1453423067}
+  orbitPrefab: {fileID: 1087400383780557966, guid: 3d852d53eee8346029117db98960593b, type: 3}
+  tabletPrefab: {fileID: 6326458984454280421, guid: 383378392267244d08a12583b8506f61, type: 3}
+  robotPrefab: {fileID: 3270092872052030401, guid: 0e4d802c3235642238ba67f27be381f6, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -14994,3 +15049,5 @@ SceneRoots:
   - {fileID: 986200353}
   - {fileID: 544732128}
   - {fileID: 1875087786}
+  - {fileID: 483924700}
+  - {fileID: 6376112834509601002}
