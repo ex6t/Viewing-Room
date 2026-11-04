@@ -119,6 +119,11 @@ public class ObservatoryModelDisplay : MonoBehaviour
 
     public void SetSpaceView(bool space)
     {
+        SetSpaceView(space, playerCamera != null ? new Pose(playerCamera.transform.position, playerCamera.transform.rotation) : Pose.identity);
+    }
+
+    public void SetSpaceView(bool space, Pose viewingPose)
+    {
         if (space == IsSpaceView) return;
         if (space)
         {
@@ -138,8 +143,11 @@ public class ObservatoryModelDisplay : MonoBehaviour
             originalOrbitVisible = orbit.orbitPath.enabled;
             previousCameraMask = playerCamera.cullingMask;
             previousClearFlags = playerCamera.clearFlags;
+            Vector3 forward = Vector3.ProjectOnPlane(viewingPose.rotation * Vector3.forward, Vector3.up).normalized;
+            if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
+            Quaternion viewingRotation = Quaternion.LookRotation(forward, Vector3.up);
             // Capture the settled headset position once; tracking/recentering may finish after Start.
-            groundCamera.transform.SetPositionAndRotation(playerCamera.transform.position, playerCamera.transform.rotation);
+            groundCamera.transform.SetPositionAndRotation(viewingPose.position, viewingPose.rotation);
             playerSkybox = playerCamera.GetComponent<Skybox>();
             if (playerSkybox == null)
             {
@@ -152,14 +160,11 @@ public class ObservatoryModelDisplay : MonoBehaviour
             playerSkybox.material = runtimeSpaceSky != null ? runtimeSpaceSky : runtimeStars;
             if (runtimeSpaceSky != null)
                 // Face the inherited red nebula as it appears from the original station's 270-degree view.
-                runtimeSpaceSky.SetFloat("_Rotation", spaceSkyboxMaterial.GetFloat("_Rotation") + playerCamera.transform.eulerAngles.y - 270f);
+                runtimeSpaceSky.SetFloat("_Rotation", spaceSkyboxMaterial.GetFloat("_Rotation") + viewingRotation.eulerAngles.y - 270f);
             playerSkybox.enabled = true;
             playerCamera.clearFlags = CameraClearFlags.Skybox;
             playerCamera.cullingMask = (previousCameraMask & ~(1 << groundLayer)) | (1 << modelLayer);
 
-            Vector3 forward = Vector3.ProjectOnPlane(playerCamera.transform.forward, Vector3.up).normalized;
-            if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
-            Quaternion viewingRotation = Quaternion.LookRotation(forward, Vector3.up);
             // Keep the inherited HubStation view level, with Earth closer than the Sun.
             // Look farther around the daylight side while keeping both bodies visible.
             Quaternion relativeOrbit = Quaternion.Inverse(modelRoot.rotation) * orbit.orbitPlane.rotation;
@@ -174,7 +179,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
             orbit.SetDisplayScale(spaceMetresPerAU);
             orbit.orbitPath.enabled = false;
             Vector3 right = Vector3.Cross(Vector3.up, forward);
-            Vector3 feet = playerCamera.transform.position;
+            Vector3 feet = viewingPose.position;
             feet.y = playerCamera.transform.root.position.y;
             Vector3 sunPosition = feet + forward * 68.758f - right * 36.559f;
             modelRoot.position += sunPosition - orbit.sun.position;
@@ -186,7 +191,7 @@ public class ObservatoryModelDisplay : MonoBehaviour
             }
             // Keep the sky as a small side monitor, below the Sun and Earth.
             Vector3 monitorOffset = forward * 1.6f - right * 0.9f;
-            frame.transform.SetPositionAndRotation(playerCamera.transform.position + monitorOffset - Vector3.up * 0.75f,
+            frame.transform.SetPositionAndRotation(viewingPose.position + monitorOffset - Vector3.up * 0.75f,
                 Quaternion.LookRotation(monitorOffset.normalized, Vector3.up) * Quaternion.Euler(40f, 0f, 0f));
             frame.transform.localScale = originalWindowScale * 0.38f;
             //keep the whole monitor above the deck when the simulator reports a low head pose

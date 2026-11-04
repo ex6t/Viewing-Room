@@ -23,13 +23,13 @@ Slim rear arches, a low terrace, hills and inherited nature props leave the outd
 | Show / hide the daily Sun path | Y | P |
 | Hide / restore terrain while the path is visible | Left grip | H |
 | Reset the day / return to sky / replay | B | B |
-| Snap turn | Right stick | XR input simulation |
+| Snap turn in the Earth view | Right stick | XR input simulation |
 
-Time moves gently on its own. The left stick moves time even while playback is paused. Y toggles the Sun path during observation; M does not open a menu. Travel stays paused during the guided chapter and its ending; A continues into Seasons and B replays the chapter. Tracked head movement and guided snap turning remain available. Opening Observatory directly in the Editor retains its introductory flow for development.
+Time moves gently on its own. The left stick moves time even while playback is paused. Y toggles the Sun path during observation; M does not open a menu. Travel stays paused during the guided chapter and its ending; A continues into Seasons and B replays the chapter. Head tracking remains active throughout, with guided snap turning available in the Earth view. Opening Observatory directly in the Editor retains its introductory flow for development.
 
 ## Rocket ascent
 
-Every trip from Earth to space starts a 30-second rocket-cabin prototype. Buildings fall away, clouds and an aircraft mark increasing height, then a curved Earth appears beneath a darkening sky. The cockpit stays fixed while natural head tracking remains active. Its dashboard shows altitude and a vertical 0-100 km scale. **X pauses/resumes the ascent; B cancels back to California.** Returning from space uses the short fade.
+Every trip from Earth to space starts a 30-second rocket-cabin prototype. Buildings fall away, clouds and an aircraft mark increasing height, then a curved Earth appears beneath a darkening sky. The cockpit stays fixed while natural head tracking remains active. Its dashboard shows altitude and a vertical 0-100 km scale. At the station, the hatch opens and a short automatic move takes the learner 2.4 metres to the observation ledge. The rocket remains parked behind them. **X pauses/resumes the trip; B cancels back to California.** Walking controls and teleporting stay disabled. Returning from space uses the short fade.
 
 This is a time-compressed teaching transition with approximate atmospheric layers. It ends at the conventional 100 km edge-of-space marker, followed by the existing enlarged Earth/Sun teaching display. It does not simulate entering orbit. The lesson's clock, pause state, Sun-path setting and terrain setting survive completion or cancellation. See [ROCKET_TRANSITION.md](ROCKET_TRANSITION.md) for setup and testing.
 

@@ -11,6 +11,8 @@ public class ObservatoryRocketAscent : MonoBehaviour
     public bool WasCancelled { get; private set; }
     public bool HasArrived => IsActive && elapsed >= Mathf.Max(1f, ascentSeconds);
     public float AltitudeMetres { get; private set; }
+    public Pose LaunchPose { get; private set; }
+    public Pose LaunchEyePose { get; private set; }
 
     const int flightLayer = 30;
     GameObject cabinRoot;
@@ -54,6 +56,8 @@ public class ObservatoryRocketAscent : MonoBehaviour
         if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
         //capture the seat once so leaning and looking still come from real tracking
         cabinRoot.transform.SetPositionAndRotation(flightCamera.transform.position, Quaternion.LookRotation(forward, Vector3.up));
+        LaunchPose = new Pose(cabinRoot.transform.position, cabinRoot.transform.rotation);
+        LaunchEyePose = new Pose(flightCamera.transform.position, flightCamera.transform.rotation);
         previousMask = flightCamera.cullingMask;
         previousClearFlags = flightCamera.clearFlags;
         previousBackground = flightCamera.backgroundColor;
