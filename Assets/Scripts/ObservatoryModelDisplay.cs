@@ -122,6 +122,25 @@ public class ObservatoryModelDisplay : MonoBehaviour
         SetSpaceView(space, playerCamera != null ? new Pose(playerCamera.transform.position, playerCamera.transform.rotation) : Pose.identity);
     }
 
+    public Skybox GetPlayerSkybox()
+    {
+        if (playerSkybox != null) return playerSkybox;
+        playerSkybox = playerCamera.GetComponent<Skybox>();
+        if (playerSkybox == null)
+        {
+            playerSkybox = playerCamera.gameObject.AddComponent<Skybox>();
+            playerSkybox.enabled = false;
+            addedPlayerSkybox = true;
+        }
+        return playerSkybox;
+    }
+
+    public void AlignSpaceSky(Material sky, Quaternion viewingRotation)
+    {
+        //keep the cabin and station facing the same part of the inherited nebula
+        sky.SetFloat("_Rotation", spaceSkyboxMaterial.GetFloat("_Rotation") + viewingRotation.eulerAngles.y - 270f);
+    }
+
     public void SetSpaceView(bool space, Pose viewingPose)
     {
         if (space == IsSpaceView) return;
@@ -148,19 +167,12 @@ public class ObservatoryModelDisplay : MonoBehaviour
             Quaternion viewingRotation = Quaternion.LookRotation(forward, Vector3.up);
             // Capture the settled headset position once; tracking/recentering may finish after Start.
             groundCamera.transform.SetPositionAndRotation(viewingPose.position, viewingPose.rotation);
-            playerSkybox = playerCamera.GetComponent<Skybox>();
-            if (playerSkybox == null)
-            {
-                playerSkybox = playerCamera.gameObject.AddComponent<Skybox>();
-                playerSkybox.enabled = false;
-                addedPlayerSkybox = true;
-            }
+            GetPlayerSkybox();
             previousPlayerSky = playerSkybox.material;
             previousSkyboxEnabled = playerSkybox.enabled;
             playerSkybox.material = runtimeSpaceSky != null ? runtimeSpaceSky : runtimeStars;
             if (runtimeSpaceSky != null)
-                // Face the inherited red nebula as it appears from the original station's 270-degree view.
-                runtimeSpaceSky.SetFloat("_Rotation", spaceSkyboxMaterial.GetFloat("_Rotation") + viewingRotation.eulerAngles.y - 270f);
+                AlignSpaceSky(runtimeSpaceSky, viewingRotation);
             playerSkybox.enabled = true;
             playerCamera.clearFlags = CameraClearFlags.Skybox;
             playerCamera.cullingMask = (previousCameraMask & ~(1 << groundLayer)) | (1 << modelLayer);

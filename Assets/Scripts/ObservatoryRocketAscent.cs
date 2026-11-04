@@ -15,11 +15,15 @@ public class ObservatoryRocketAscent : MonoBehaviour
     public Pose LaunchEyePose { get; private set; }
 
     const int flightLayer = 30;
+    static readonly int exposureId = Shader.PropertyToID("_Exposure");
     GameObject cabinRoot;
     ObservatoryRocketCabin cabin;
     ObservatoryModelDisplay display;
     Camera flightCamera;
     Skybox cameraSkybox;
+    Material flightSky;
+    Material previousSkyMaterial;
+    float spaceSkyExposure;
     AudioSource engine;
     AudioClip engineClip;
     int previousMask;
@@ -37,10 +41,13 @@ public class ObservatoryRocketAscent : MonoBehaviour
         if (IsActive || !isActiveAndEnabled || modelDisplay == null || modelDisplay.IsSpaceView ||
             modelDisplay.playerCamera == null || modelDisplay.modelCamera == null || modelDisplay.groundCamera == null ||
             modelDisplay.frame == null || font == null) return false;
-        var sun = modelDisplay.observation != null && modelDisplay.observation.earthOrbit != null ?
-            modelDisplay.observation.earthOrbit.sun : null;
+        var observation = modelDisplay.observation;
+        var sun = observation != null && observation.earthOrbit != null ? observation.earthOrbit.sun : null;
         var surface = sun != null ? sun.GetComponent<Renderer>() : null;
-        if (surface == null || surface.sharedMaterial == null) return false;
+        var globe = observation != null ? observation.globeRenderer : null;
+        var globeFilter = globe != null ? globe.GetComponent<MeshFilter>() : null;
+        if (surface == null || surface.sharedMaterial == null || globeFilter == null || globeFilter.sharedMesh == null ||
+            globe.sharedMaterial == null) return false;
 
         display = modelDisplay;
         flightCamera = display.playerCamera;
@@ -49,7 +56,13 @@ public class ObservatoryRocketAscent : MonoBehaviour
             cabinRoot = new GameObject("Rocket Ascent Prototype");
             cabinRoot.SetActive(false);
             cabinRoot.transform.SetParent(transform, false);
-            cabin = new ObservatoryRocketCabin(cabinRoot.transform, flightLayer, surface.sharedMaterial, font);
+            cabin = new ObservatoryRocketCabin(cabinRoot.transform, flightLayer, surface.sharedMaterial, font,
+                globeFilter.sharedMesh, globe.sharedMaterial);
+            if (display.spaceSkyboxMaterial != null)
+            {
+                flightSky = new Material(display.spaceSkyboxMaterial) { name = "Rocket flight sky" };
+                spaceSkyExposure = flightSky.GetFloat(exposureId);
+            }
             BuildEngineSound();
         }
         Vector3 forward = Vector3.ProjectOnPlane(flightCamera.transform.forward, Vector3.up).normalized;
@@ -58,18 +71,30 @@ public class ObservatoryRocketAscent : MonoBehaviour
         cabinRoot.transform.SetPositionAndRotation(flightCamera.transform.position, Quaternion.LookRotation(forward, Vector3.up));
         LaunchPose = new Pose(cabinRoot.transform.position, cabinRoot.transform.rotation);
         LaunchEyePose = new Pose(flightCamera.transform.position, flightCamera.transform.rotation);
+        var north = observation.earthOrbit.orbitPlane.TransformDirection(observation.AxisDirectionLocal);
+        cabin.SetEarthView(globe.transform.InverseTransformDirection(observation.ObserverNormalWorld),
+            globe.transform.InverseTransformDirection(north));
         previousMask = flightCamera.cullingMask;
         previousClearFlags = flightCamera.clearFlags;
         previousBackground = flightCamera.backgroundColor;
         previousFarClip = flightCamera.farClipPlane;
-        cameraSkybox = flightCamera.GetComponent<Skybox>();
+        cameraSkybox = flightSky != null ? display.GetPlayerSkybox() : flightCamera.GetComponent<Skybox>();
+        previousSkyMaterial = cameraSkybox != null ? cameraSkybox.material : null;
         previousSkyboxEnabled = cameraSkybox != null && cameraSkybox.enabled;
         previousModelCameraEnabled = display.modelCamera.enabled;
         previousGroundCameraEnabled = display.groundCamera.enabled;
         previousFrameVisible = display.frame.activeSelf;
         display.modelCamera.enabled = display.groundCamera.enabled = false;
         display.frame.SetActive(false);
-        if (cameraSkybox != null) cameraSkybox.enabled = false;
+        if (cameraSkybox != null)
+        {
+            cameraSkybox.enabled = false;
+            if (flightSky != null)
+            {
+                display.AlignSpaceSky(flightSky, LaunchPose.rotation);
+                cameraSkybox.material = flightSky;
+            }
+        }
         flightCamera.cullingMask = (1 << flightLayer) | (1 << fadeLayer);
         flightCamera.clearFlags = CameraClearFlags.SolidColor;
         flightCamera.farClipPlane = Mathf.Max(600f, previousFarClip);
@@ -100,6 +125,18 @@ public class ObservatoryRocketAscent : MonoBehaviour
     {
         cabin.SetAltitude(AltitudeMetres);
         flightCamera.backgroundColor = cabin.SkyColor;
+        if (flightSky != null && cameraSkybox != null && AltitudeMetres >= ObservatoryRocketCabin.SpaceSkyStartMetres)
+        {
+            float blend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(ObservatoryRocketCabin.SpaceSkyStartMetres, 94000f, AltitudeMetres));
+            flightSky.SetFloat(exposureId, blend * spaceSkyExposure);
+            cameraSkybox.enabled = true;
+            flightCamera.clearFlags = CameraClearFlags.Skybox;
+        }
+        else
+        {
+            if (cameraSkybox != null) cameraSkybox.enabled = false;
+            flightCamera.clearFlags = CameraClearFlags.SolidColor;
+        }
         if (engine != null) engine.pitch = Mathf.Lerp(0.8f, 1.15f, AltitudeMetres / 100000f);
     }
 
@@ -128,7 +165,11 @@ public class ObservatoryRocketAscent : MonoBehaviour
             flightCamera.backgroundColor = previousBackground;
             flightCamera.farClipPlane = previousFarClip;
         }
-        if (cameraSkybox != null) cameraSkybox.enabled = previousSkyboxEnabled;
+        if (cameraSkybox != null)
+        {
+            cameraSkybox.material = previousSkyMaterial;
+            cameraSkybox.enabled = previousSkyboxEnabled;
+        }
         if (display != null)
         {
             if (display.modelCamera != null) display.modelCamera.enabled = previousModelCameraEnabled;
@@ -167,5 +208,6 @@ public class ObservatoryRocketAscent : MonoBehaviour
         cabin?.Dispose();
         if (cabinRoot != null) Destroy(cabinRoot);
         if (engineClip != null) Destroy(engineClip);
+        if (flightSky != null) Destroy(flightSky);
     }
 }
