@@ -134,3 +134,4 @@ __pycache__/
 
 # Keep local planning, handbooks and generated reports outside the game repository.
 /Docs/
+Assets/_Recovery.meta
