@@ -18,6 +18,8 @@ public class ObservatoryTour : MonoBehaviour
     public GameObject modelView;
     public ObservatoryModelDisplay modelDisplay;
     public ObservatorySunPath sunPath;
+    public ObservatoryRocketAscent rocketAscent;
+    public ObservatoryRocketArrival rocketArrival;
     public Light modelLight;
     public Canvas captionCanvas;
     public TMP_Text caption;
@@ -78,6 +80,10 @@ public class ObservatoryTour : MonoBehaviour
             return;
         }
         hintColor = hint.color;
+        if (rocketAscent == null) rocketAscent = GetComponent<ObservatoryRocketAscent>();
+        if (rocketAscent == null) rocketAscent = gameObject.AddComponent<ObservatoryRocketAscent>();
+        if (rocketArrival == null) rocketArrival = GetComponent<ObservatoryRocketArrival>();
+        if (rocketArrival == null) rocketArrival = gameObject.AddComponent<ObservatoryRocketArrival>();
         initialized = true;
         PlaceDisplays();
         ShowView(true);
@@ -199,11 +205,25 @@ public class ObservatoryTour : MonoBehaviour
         if (!IsPresenting) return;
         if (CurrentStep == TourStep.Introduction) transition = StartCoroutine(BeginObservation());
         else if (CurrentStep == TourStep.Sky) transition = StartCoroutine(ChangeView(false));
-        else if (CurrentStep == TourStep.Earth) Finish();
+        else if (CurrentStep == TourStep.Earth)
+        {
+            if (modelDisplay.IsSpaceView) transition = StartCoroutine(FinishFromSpace());
+            else Finish();
+        }
     }
 
     public void Interact()
     {
+        if (rocketArrival != null && rocketArrival.IsActive)
+        {
+            rocketArrival.TogglePause();
+            return;
+        }
+        if (rocketAscent != null && rocketAscent.IsActive)
+        {
+            rocketAscent.TogglePause();
+            return;
+        }
         if (!IsPresenting || IsTransitioning || CurrentStep == TourStep.Introduction) return;
         IsPaused = !IsPaused;
         RefreshClock();
@@ -237,16 +257,68 @@ public class ObservatoryTour : MonoBehaviour
 
     IEnumerator SwapPerspective()
     {
+        bool enteringSpace = !modelDisplay.IsSpaceView;
         observation.SetSuspended(true);
-        viewFade.gameObject.SetActive(true);
-        for (float t = 0f; t < 0.25f; t += Time.unscaledDeltaTime)
+        yield return FadeView(true, 0.25f);
+        bool cancelled = false;
+        if (enteringSpace)
         {
-            viewFade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(t / 0.25f));
-            yield return null;
+            bool pathWasVisible = sunPath != null && sunPath.IsPathVisible;
+            bool terrainWasHidden = sunPath != null && sunPath.IsTerrainHidden;
+            if (sunPath != null) sunPath.SetAvailable(false);
+            captionCanvas.gameObject.SetActive(false);
+            clockStand.gameObject.SetActive(false);
+            if (voice != null) voice.Stop();
+            welcome.PauseLocomotion();
+            controls.ResetInput();
+            if (rocketAscent.Begin(modelDisplay, caption.font, viewFade.gameObject.layer))
+            {
+                yield return FadeView(false, 0.35f);
+                while (rocketAscent.IsActive && !rocketAscent.HasArrived && !rocketAscent.WasCancelled)
+                    yield return null;
+                cancelled = !rocketAscent.IsActive || rocketAscent.WasCancelled;
+                yield return FadeView(true, 0.25f);
+                cancelled |= !rocketAscent.IsActive || rocketAscent.WasCancelled;
+                //restore the flight camera before the space view saves its settings
+                rocketAscent.End();
+            }
+            else cancelled = true;
+            if (sunPath != null)
+            {
+                sunPath.SetAvailable(true);
+                sunPath.SetPathVisible(pathWasVisible);
+                sunPath.SetTerrainHidden(terrainWasHidden);
+            }
+            if (!cancelled)
+            {
+                modelDisplay.SetSpaceView(true, rocketAscent.LaunchEyePose);
+                Transform origin = welcome.locomotion.playerOrigin != null ? welcome.locomotion.playerOrigin.Origin.transform : null;
+                if (rocketArrival.Begin(modelDisplay, origin, rocketAscent.LaunchPose, captionCanvas.transform, clockStand))
+                {
+                    yield return FadeView(false, 0.35f);
+                    rocketArrival.StartExit();
+                    while (rocketArrival.IsActive && !rocketArrival.WasCancelled) yield return null;
+                    cancelled = !rocketArrival.HasArrived || rocketArrival.WasCancelled;
+                    if (cancelled)
+                    {
+                        yield return FadeView(true, 0.25f);
+                        rocketArrival.Restore();
+                    }
+                }
+                else cancelled = true;
+                if (cancelled) modelDisplay.SetSpaceView(false);
+            }
         }
-        viewFade.color = Color.black;
-        modelDisplay.SetSpaceView(!modelDisplay.IsSpaceView);
-        ShowCaption(modelDisplay.IsSpaceView ? "A winter day, seen from space." : "The same sky in California.", 6f);
+        else
+        {
+            rocketArrival.Restore();
+            modelDisplay.SetSpaceView(false);
+        }
+        captionCanvas.gameObject.SetActive(true);
+        clockStand.gameObject.SetActive(true);
+        welcome.PauseLocomotion(!modelDisplay.IsSpaceView);
+        ShowCaption(cancelled ? "Trip cancelled. Back in California." :
+            modelDisplay.IsSpaceView ? "Watch California from the station ledge." : "The same sky in California.", 6f);
         if (modelDisplay.IsSpaceView)
         {
             PlayLine(spaceLine);
@@ -260,18 +332,45 @@ public class ObservatoryTour : MonoBehaviour
         timeReady = false;
         controls.ResetInput();
         RefreshClock();
-        for (float t = 0f; t < 0.25f; t += Time.unscaledDeltaTime)
+        if (viewFade.gameObject.activeSelf) yield return FadeView(false, 0.25f);
+        observation.SetSuspended(false);
+        transition = null;
+    }
+
+    IEnumerator FadeView(bool toBlack, float seconds)
+    {
+        viewFade.gameObject.SetActive(true);
+        for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime)
         {
-            viewFade.color = new Color(0f, 0f, 0f, 1f - Mathf.Clamp01(t / 0.25f));
+            float alpha = Mathf.Clamp01(t / seconds);
+            viewFade.color = new Color(0f, 0f, 0f, toBlack ? alpha : 1f - alpha);
             yield return null;
         }
-        ClearFade();
-        observation.SetSuspended(false);
+        if (toBlack) viewFade.color = Color.black;
+        else ClearFade();
+    }
+
+    IEnumerator FinishFromSpace()
+    {
+        observation.SetSuspended(true);
+        yield return FadeView(true, 0.25f);
+        Finish();
+        yield return FadeView(false, 0.25f);
         transition = null;
     }
 
     public void ResetOrGoBack()
     {
+        if (rocketArrival != null && rocketArrival.IsActive)
+        {
+            rocketArrival.Cancel();
+            return;
+        }
+        if (rocketAscent != null && rocketAscent.IsActive)
+        {
+            rocketAscent.Cancel();
+            return;
+        }
         if (IsTransitioning || welcome.IsShowing) return;
         if (CurrentStep == TourStep.Complete) { hasResume = false; StartGuidedTour(); }
         else if (!IsPresenting) return;
@@ -317,6 +416,7 @@ public class ObservatoryTour : MonoBehaviour
 
     void Finish()
     {
+        if (rocketArrival != null) rocketArrival.Restore();
         if (sunPath != null) sunPath.SetAvailable(false);
         CurrentStep = TourStep.Complete;
         IsPresenting = false;
@@ -370,6 +470,7 @@ public class ObservatoryTour : MonoBehaviour
 
     void ShowView(bool fromGround)
     {
+        if (rocketArrival != null) rocketArrival.Restore();
         if (sunPath != null) sunPath.SetAvailable(CurrentStep == TourStep.Sky || CurrentStep == TourStep.Earth);
         modelDisplay.SetSpaceView(false);
         groundView.SetActive(true); // The local sky remains visible beside its Earth explanation.
@@ -474,6 +575,8 @@ public class ObservatoryTour : MonoBehaviour
     void CancelTransition()
     {
         if (transition != null) StopCoroutine(transition);
+        if (rocketAscent != null) rocketAscent.End();
+        if (rocketArrival != null) rocketArrival.Restore();
         transition = null;
         ClearFade();
     }
