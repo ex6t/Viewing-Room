@@ -13,6 +13,8 @@ public sealed class ObservatoryRocketCabin
     readonly MeshRenderer earthSurface;
     readonly MaterialPropertyBlock earthLighting = new MaterialPropertyBlock();
     static readonly int sunDirectionId = Shader.PropertyToID("_ModelSunDirection");
+    static readonly int hazeColorId = Shader.PropertyToID("_FlightHazeColor");
+    static readonly int hazeId = Shader.PropertyToID("_FlightHaze");
     readonly List<Material> materials = new List<Material>();
     readonly List<Mesh> ownedMeshes = new List<Mesh>();
     readonly Dictionary<PrimitiveType, Mesh> meshes = new Dictionary<PrimitiveType, Mesh>();
@@ -96,6 +98,7 @@ public sealed class ObservatoryRocketCabin
         Box("Aircraft tail", airplane, new Vector3(-2.15f, 0.56f, 0f), new Vector3(0.8f, 1.1f, 0.10f), plane);
 
         earth = Group("Upper atmosphere horizon", root);
+        earth.localScale = Vector3.one * (58f * 2.2f);
         //reuse the globe without copying its orbit scripts or California pointer
         float meshScale = 1f / Mathf.Max(0.001f, earthMesh.bounds.extents.x);
         earthSurface = MeshPiece("Flight Earth", earth, earthMesh, -earthMesh.bounds.center * meshScale,
@@ -125,12 +128,15 @@ public sealed class ObservatoryRocketCabin
         float passing = Mathf.Clamp01((altitude - 2500f) / 14000f);
         airplane.localPosition = new Vector3(Mathf.Lerp(-23f, 24f, passing), Mathf.Lerp(12f, -9f, passing), 35f);
         airplane.gameObject.SetActive(altitude > 2500f && altitude < 19000f);
-        float horizon = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(12000f, 35000f, altitude));
-        float recede = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(35000f, 100000f, altitude));
-        earth.gameObject.SetActive(altitude > 12000f);
-        earth.localPosition = new Vector3(32f * recede, Mathf.Lerp(-160f, -100f, horizon) + 29f * recede, 112f + 42f * recede);
-        earth.localScale = Vector3.one * Mathf.Lerp(105f, 58f, recede);
         SkyColor = Color.Lerp(new Color(0.29f, 0.61f, 0.84f), Color.black, Mathf.SmoothStep(0f, 1f, altitude / SpaceSkyStartMetres));
+        //keep Earth's size fixed and put it behind the clouds as the cabin climbs away
+        float recede = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(12000f, 100000f, altitude));
+        earth.gameObject.SetActive(altitude > 12000f);
+        earth.localPosition = Vector3.Lerp(new Vector3(0f, -45f, 95f), new Vector3(32f, -71f, 154f), recede) * 2.2f;
+        //the curve is already there when it starts to show through the haze
+        earthLighting.SetColor(hazeColorId, SkyColor);
+        earthLighting.SetFloat(hazeId, 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(12000f, 32000f, altitude)));
+        earthSurface.SetPropertyBlock(earthLighting);
         altitudeText.text = altitude < 1000f ? altitude.ToString("0") + " m" : (altitude / 1000f).ToString("0.0") + " km";
         layerText.text = altitude >= 100000f ? "Edge of space / 100 km" : altitude >= 85000f ? "Thermosphere" :
             altitude >= 50000f ? "Mesosphere" : altitude >= 12000f ? "Stratosphere" : "Troposphere";

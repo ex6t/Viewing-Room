@@ -7,6 +7,8 @@ Shader "Viewing Room/Earth Day Night"
         _NightBrightness("Night Visibility", Range(0,0.2)) = 0.035
         _DayBrightness("Day Brightness", Range(0,3)) = 1.4
         _ModelSunDirection("Direction to the model Sun", Vector) = (-1,0,0,0)
+        [HideInInspector] _FlightHazeColor("Flight haze color", Color) = (0,0,0,1)
+        [HideInInspector] _FlightHaze("Flight haze", Range(0,1)) = 0
     }
     SubShader
     {
@@ -27,6 +29,8 @@ Shader "Viewing Room/Earth Day Night"
                 float4 _ModelSunDirection;
                 float _NightBrightness;
                 float _DayBrightness;
+                half4 _FlightHazeColor;
+                half _FlightHaze;
             CBUFFER_END
             struct Attributes
             {
@@ -59,7 +63,8 @@ Shader "Viewing Room/Earth Day Night"
                 // This globe is a diagram above the same ground sky, so its light uses
                 // the research Sun in the model frame rather than the room's directional light.
                 float sunlight = max(0, dot(normalize(input.normalWS), normalize(_ModelSunDirection.xyz)));
-                return half4(surface * (_NightBrightness + sunlight * _DayBrightness), 1);
+                half3 litSurface = surface * (_NightBrightness + sunlight * _DayBrightness);
+                return half4(lerp(litSurface, _FlightHazeColor.rgb, _FlightHaze), 1);
             }
             ENDHLSL
         }
