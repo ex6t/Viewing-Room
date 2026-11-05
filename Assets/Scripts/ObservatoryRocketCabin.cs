@@ -9,6 +9,11 @@ public sealed class ObservatoryRocketCabin
     internal const float SpaceSkyStartMetres = 55000f;
     public Color SkyColor { get; private set; }
 
+    const float earthRadius = 58f * 2.2f;
+    static readonly Vector3 farEarth = new Vector3(32f, -71f, 154f) * 2.2f;
+    static readonly Vector3 earthBearing = Vector3.ProjectOnPlane(farEarth, Vector3.up).normalized;
+    static readonly float farEarthAngle = Mathf.Asin(earthRadius / farEarth.magnitude);
+    static readonly float farEarthLimb = Mathf.Asin(farEarth.y / farEarth.magnitude) + farEarthAngle;
     readonly Transform root, city, clouds, airplane, earth;
     readonly MeshRenderer earthSurface;
     readonly MaterialPropertyBlock earthLighting = new MaterialPropertyBlock();
@@ -99,10 +104,11 @@ public sealed class ObservatoryRocketCabin
         Box("Aircraft tail", airplane, new Vector3(-2.15f, 0.56f, 0f), new Vector3(0.8f, 1.1f, 0.10f), plane);
 
         earth = Group("Upper atmosphere horizon", root);
-        earth.localScale = Vector3.one * (58f * 2.2f);
+        earth.localScale = Vector3.one * earthRadius;
         //reuse the globe without copying its orbit scripts or California pointer
-        float meshScale = 1f / Mathf.Max(0.001f, earthMesh.bounds.extents.x);
-        earthSurface = MeshPiece("Flight Earth", earth, earthMesh, -earthMesh.bounds.center * meshScale,
+        Mesh flightMesh = RefineFlightEarth(earthMesh);
+        float meshScale = 1f / Mathf.Max(0.001f, flightMesh.bounds.extents.x);
+        earthSurface = MeshPiece("Flight Earth", earth, flightMesh, -flightMesh.bounds.center * meshScale,
             Vector3.one * meshScale, earthMaterial).GetComponent<MeshRenderer>();
         SetAltitude(0f);
     }
@@ -130,14 +136,20 @@ public sealed class ObservatoryRocketCabin
         float passing = Mathf.Clamp01((altitude - 2500f) / 14000f);
         airplane.localPosition = new Vector3(Mathf.Lerp(-43f, 43f, passing), Mathf.Lerp(12f, -9f, passing), 35f);
         airplane.gameObject.SetActive(altitude > 2500f && altitude < 19000f);
-        SkyColor = Color.Lerp(new Color(0.29f, 0.61f, 0.84f), Color.black, Mathf.SmoothStep(0f, 1f, altitude / SpaceSkyStartMetres));
-        //keep the same close horizon behind the clouds and let it fall away at one bearing
-        Vector3 farEarth = new Vector3(32f, -71f, 154f);
-        Vector3 nearEarth = new Vector3(farEarth.x * 64f / farEarth.z, -58.4f, 64f);
-        earth.localPosition = Vector3.Lerp(nearEarth, farEarth, AltitudeBlend(2500f, 100000f, altitude)) * 2.2f;
-        //start seeing the horizon through the air before the troposphere ends
+        Color blueAir = Color.Lerp(new Color(0.29f, 0.61f, 0.84f), new Color(0.06f, 0.14f, 0.25f),
+            AltitudeBlend(6000f, 24000f, altitude));
+        SkyColor = Color.Lerp(blueAir, Color.black, AltitudeBlend(1000f, SpaceSkyStartMetres, altitude));
+        //start with a wide horizon under the cabin, then let the same Earth recede
+        float pullAway = AltitudeBlend(16000f, 100000f, altitude);
+        float angularRadius = Mathf.Lerp(72f * Mathf.Deg2Rad, farEarthAngle, pullAway);
+        float limb = Mathf.Lerp(-3.5f * Mathf.Deg2Rad, farEarthLimb, pullAway);
+        float elevation = limb - angularRadius;
+        Vector3 heading = Vector3.Slerp(Vector3.forward, earthBearing, pullAway);
+        Vector3 direction = heading * Mathf.Cos(elevation) + Vector3.up * Mathf.Sin(elevation);
+        earth.localPosition = direction * (earthRadius / Mathf.Sin(angularRadius));
+        //the air tints the surface but never hides it
         earthLighting.SetColor(hazeColorId, SkyColor);
-        earthLighting.SetFloat(hazeId, 1f - AltitudeBlend(2500f, 50000f, altitude));
+        earthLighting.SetFloat(hazeId, 0.38f * (1f - AltitudeBlend(9000f, 50000f, altitude)));
         earthLighting.SetFloat(atmosphereId, AltitudeBlend(3500f, 18000f, altitude) * (1f - AltitudeBlend(28000f, 94000f, altitude)));
         earthSurface.SetPropertyBlock(earthLighting);
         altitudeText.text = altitude < 1000f ? altitude.ToString("0") + " m" : (altitude / 1000f).ToString("0.0") + " km";
@@ -154,6 +166,62 @@ public sealed class ObservatoryRocketCabin
     static float AltitudeBlend(float start, float end, float altitude)
     {
         return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(start, end, altitude));
+    }
+
+    Mesh RefineFlightEarth(Mesh source)
+    {
+        //add surface detail for the close horizon while keeping the original texture mapping
+        if (!source.isReadable || source.subMeshCount != 1) return source;
+        Vector3[] original = source.vertices;
+        Vector2[] originalUV = source.uv;
+        int[] originalIndices = source.triangles;
+        if (originalUV.Length != original.Length || originalIndices.Length == 0) return source;
+
+        const int divisions = 3;
+        const int verticesPerTriangle = (divisions + 1) * (divisions + 2) / 2;
+        int vertexCount = originalIndices.Length / 3 * verticesPerTriangle;
+        Vector3 center = source.bounds.center;
+        float radius = source.bounds.extents.x;
+        var vertices = new List<Vector3>(vertexCount);
+        var normals = new List<Vector3>(vertexCount);
+        var uv = new List<Vector2>(vertexCount);
+        var indices = new List<int>(originalIndices.Length * divisions * divisions);
+        for (int triangle = 0; triangle < originalIndices.Length; triangle += 3)
+        {
+            int a = originalIndices[triangle], b = originalIndices[triangle + 1], c = originalIndices[triangle + 2];
+            int rowStart = vertices.Count;
+            for (int row = 0; row <= divisions; row++)
+            {
+                int width = divisions - row + 1;
+                for (int column = 0; column < width; column++)
+                {
+                    float wb = row / (float)divisions, wc = column / (float)divisions, wa = 1f - wb - wc;
+                    Vector3 direction = (original[a] * wa + original[b] * wb + original[c] * wc - center).normalized;
+                    vertices.Add(center + direction * radius);
+                    normals.Add(direction);
+                    uv.Add(originalUV[a] * wa + originalUV[b] * wb + originalUV[c] * wc);
+                    int i = rowStart + column;
+                    if (column + 1 >= width) continue;
+                    indices.Add(i);
+                    indices.Add(i + width);
+                    indices.Add(i + 1);
+                    if (column + 2 >= width) continue;
+                    indices.Add(i + width);
+                    indices.Add(i + width + 1);
+                    indices.Add(i + 1);
+                }
+                rowStart += width;
+            }
+        }
+
+        var mesh = new Mesh { name = "Flight Earth close horizon" };
+        if (vertexCount > 65535) mesh.indexFormat = IndexFormat.UInt32;
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uv);
+        mesh.SetTriangles(indices, 0);
+        ownedMeshes.Add(mesh);
+        return mesh;
     }
 
     public void Dispose()
