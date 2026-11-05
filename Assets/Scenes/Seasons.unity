@@ -1886,8 +1886,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 483924699}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: -0.00000004371139}
-  m_LocalPosition: {x: 85, y: 0, z: -0.033}
+  m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 118.3, y: 75.2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1895,7 +1895,7 @@ Transform:
   - {fileID: 1539681833}
   - {fileID: 705647825}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 270, z: 0}
 --- !u!114 &483924701
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4296,7 +4296,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.XR.Interaction.Toolkit::UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals.XRInteractorLineVisual
   m_LineWidth: 0.003
   m_OverrideInteractorLineLength: 1
-  m_LineLength: 40
+  m_LineLength: 280
   m_AutoAdjustLineLength: 0
   m_MinLineLength: 0.5
   m_UseDistanceToHitAsMaxLineLength: 1
@@ -4682,7 +4682,7 @@ MonoBehaviour:
   m_AllowHoverHapticsWhileSelecting: 1
   m_LineType: 0
   m_BlendVisualLinePoints: 1
-  m_MaxRaycastDistance: 40
+  m_MaxRaycastDistance: 280
   m_RayOriginTransform: {fileID: 905348458}
   m_ReferenceFrame: {fileID: 0}
   m_Velocity: 16
@@ -4696,7 +4696,7 @@ MonoBehaviour:
   m_SampleFrequency: 20
   m_HitDetectionType: 2
   m_SphereCastRadius: 0.1
-  m_ConeCastAngle: 3
+  m_ConeCastAngle: 1.5
   m_LiveConeCastDebugVisuals: 0
   m_RaycastMask:
     serializedVersion: 2
@@ -7876,8 +7876,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1349681853}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 84, y: 0, z: 0}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: 123.5, y: 73, z: 3.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -7888,7 +7888,7 @@ Transform:
   - {fileID: 334956239}
   - {fileID: 241089006}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1 &1350380101
 GameObject:
   m_ObjectHideFlags: 0
@@ -9129,7 +9129,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.XR.Interaction.Toolkit::UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals.XRInteractorLineVisual
   m_LineWidth: 0.003
   m_OverrideInteractorLineLength: 1
-  m_LineLength: 40
+  m_LineLength: 280
   m_AutoAdjustLineLength: 0
   m_MinLineLength: 0.5
   m_UseDistanceToHitAsMaxLineLength: 1
@@ -9515,7 +9515,7 @@ MonoBehaviour:
   m_AllowHoverHapticsWhileSelecting: 1
   m_LineType: 0
   m_BlendVisualLinePoints: 1
-  m_MaxRaycastDistance: 40
+  m_MaxRaycastDistance: 280
   m_RayOriginTransform: {fileID: 1500860066}
   m_ReferenceFrame: {fileID: 0}
   m_Velocity: 16
@@ -9529,7 +9529,7 @@ MonoBehaviour:
   m_SampleFrequency: 20
   m_HitDetectionType: 2
   m_SphereCastRadius: 0.1
-  m_ConeCastAngle: 3
+  m_ConeCastAngle: 1.5
   m_LiveConeCastDebugVisuals: 0
   m_RaycastMask:
     serializedVersion: 2
@@ -15012,13 +15012,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6376112834509601001}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 85, y: 0, z: -0.033}
+  m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 118.3, y: 75.2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 270, z: 0}
 --- !u!114 &6376112834509601003
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15035,6 +15035,37 @@ MonoBehaviour:
   orbitPrefab: {fileID: 1087400383780557966, guid: 3d852d53eee8346029117db98960593b, type: 3}
   tabletPrefab: {fileID: 6326458984454280421, guid: 383378392267244d08a12583b8506f61, type: 3}
   robotPrefab: {fileID: 3270092872052030401, guid: 0e4d802c3235642238ba67f27be381f6, type: 3}
+  station: {fileID: 1349681854}
+  deckMaterial: {fileID: 2100000, guid: 3077630c2b552084084eefe0c912c1b5, type: 2}
+  inheritedPlanetMesh: {fileID: 4300000, guid: b82e0d2b8cc9ee64cacfa0b6e51ff1a3, type: 3}
+  inheritedEarthMaterial: {fileID: 2100000, guid: 9129bad9aad7f394aa91b2eb46de21c8, type: 2}
+  inheritedSunMaterial: {fileID: 2100000, guid: 8be537dca970c394bb90ae21eb535132, type: 2}
+  earthLightingMaterial: {fileID: 2100000, guid: 343098963e14f4fd28f58d643c542956, type: 2}
+  inheritedSeasonTrails:
+  - {fileID: 6376112834509601010}
+  - {fileID: 6376112834509601011}
+  - {fileID: 6376112834509601012}
+  - {fileID: 6376112834509601013}
+--- !u!96 &6376112834509601010 stripped
+TrailRenderer:
+  m_CorrespondingSourceObject: {fileID: 1757390840013823471, guid: 6bda14c3841e05746ba77ce8f6f04d5f, type: 3}
+  m_PrefabInstance: {fileID: 3244962290869809672}
+  m_PrefabAsset: {fileID: 0}
+--- !u!96 &6376112834509601011 stripped
+TrailRenderer:
+  m_CorrespondingSourceObject: {fileID: 2467710890116315830, guid: 6bda14c3841e05746ba77ce8f6f04d5f, type: 3}
+  m_PrefabInstance: {fileID: 3244962290869809672}
+  m_PrefabAsset: {fileID: 0}
+--- !u!96 &6376112834509601012 stripped
+TrailRenderer:
+  m_CorrespondingSourceObject: {fileID: 6363175619106165745, guid: 6bda14c3841e05746ba77ce8f6f04d5f, type: 3}
+  m_PrefabInstance: {fileID: 3244962290869809672}
+  m_PrefabAsset: {fileID: 0}
+--- !u!96 &6376112834509601013 stripped
+TrailRenderer:
+  m_CorrespondingSourceObject: {fileID: 7768227749430428521, guid: 6bda14c3841e05746ba77ce8f6f04d5f, type: 3}
+  m_PrefabInstance: {fileID: 3244962290869809672}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
