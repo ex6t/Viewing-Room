@@ -35,6 +35,8 @@ public class ObservatoryTour : MonoBehaviour
     public float automaticHoursPerSecond = 0.5f;
     public string seasonsScene = "Assets/Scenes/Seasons.unity";
 
+    const float LookUpElevation = 55f;
+
     public TourStep CurrentStep { get; private set; }
     public bool IsGuided { get; private set; }
     public bool IsPresenting { get; private set; }
@@ -131,7 +133,11 @@ public class ObservatoryTour : MonoBehaviour
         clockStand.gameObject.SetActive(true);
         observation.SetDays(days);
         ShowView(true);
-        ShowCaption("How high is the Sun today?", 8f);
+        bool sunIsHigh = observation.SunDirectionLocal.y >= Mathf.Sin(LookUpElevation * Mathf.Deg2Rad);
+        string intro = "Paused. X starts time.";
+        if (sunIsHigh) intro += "\nLook up for the Sun.";
+        else if (sunPath != null && HasHighSunPath()) intro += "\nShow path. Look up.";
+        ShowCaption(intro, 8f);
         ShowSeasonHint(true);
         controls.ResetInput();
         RefreshClock();
@@ -202,16 +208,15 @@ public class ObservatoryTour : MonoBehaviour
         bool editor = Application.isEditor;
         string view = CurrentStep == TourStep.Sky ? (editor ? "Enter: Earth" : "A: Earth") :
             (editor ? "V: " : "R grip: ") + (modelDisplay.IsSpaceView ? "sky" : "space");
-        string details = introduceTime ? (editor ? "Arrows: time" : "Stick: time") : "";
+        string details = IsPaused ? "X: play" : "X: pause";
+        if (introduceTime && (sunPath == null || !sunPath.IsPathVisible))
+            details += editor ? "   Arrows: time" : "   Stick: time";
         if (sunPath != null)
         {
-            bool pathVisible = sunPath.IsPathVisible;
-            if (pathVisible || !introduceTime) details = "";
-            if (details.Length > 0) details += "   ";
-            details += (editor ? "P: " : "Y: ") + (pathVisible ? "hide path" : "show path");
-            if (pathVisible) details += editor ? "   H: terrain" : "   L grip: terrain";
+            details += editor ? "   P: path" : "   Y: path";
+            if (sunPath.IsPathVisible) details += editor ? "   H: terrain" : "   L grip: terrain";
         }
-        hint.text = view + "   B: seasons" + (details.Length > 0 ? "\n" + details : "");
+        hint.text = view + "   B: seasons\n" + details;
     }
 
     public void StartGuidedTour()
@@ -251,6 +256,11 @@ public class ObservatoryTour : MonoBehaviour
 
     public void ContinueLesson()
     {
+        if (rocketAscent != null && rocketAscent.IsActive)
+        {
+            rocketAscent.Skip();
+            return;
+        }
         if (IsTransitioning || welcome.IsShowing) return;
         if (CurrentStep == TourStep.Complete)
         {
@@ -282,6 +292,11 @@ public class ObservatoryTour : MonoBehaviour
         }
         if (!IsPresenting || IsTransitioning || CurrentStep == TourStep.Introduction) return;
         IsPaused = !IsPaused;
+        if (fromSeasons)
+        {
+            if (!IsPaused) holdUntil = Time.unscaledTime;
+            ShowCaption(IsPaused ? "Time is paused." : "Time is playing.", 3f);
+        }
         RefreshClock();
     }
 
@@ -295,7 +310,19 @@ public class ObservatoryTour : MonoBehaviour
     {
         if (!CanChangeSunPath()) return;
         sunPath.TogglePath();
-        ShowCaption(sunPath.IsPathVisible ? "Gold: the Sun's daily path." : "Sun path hidden.", 6f);
+        ShowCaption(sunPath.IsPathVisible ? VisibleSunPathCaption() : "Sun path hidden.", 6f);
+    }
+
+    string VisibleSunPathCaption()
+    {
+        if (modelDisplay.IsSpaceView) return "Path on the monitor.";
+        return HasHighSunPath() ? "Gold path: look up." : "Gold: the Sun's daily path.";
+    }
+
+    bool HasHighSunPath()
+    {
+        double noonElevation = 90.0 - Math.Abs(EarthObservationModel.LatitudeDegrees - observation.SolarDeclinationDegrees);
+        return noonElevation >= LookUpElevation;
     }
 
     public void ToggleTerrain()

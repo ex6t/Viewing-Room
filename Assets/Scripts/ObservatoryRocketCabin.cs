@@ -15,6 +15,7 @@ public sealed class ObservatoryRocketCabin
     static readonly int sunDirectionId = Shader.PropertyToID("_ModelSunDirection");
     static readonly int hazeColorId = Shader.PropertyToID("_FlightHazeColor");
     static readonly int hazeId = Shader.PropertyToID("_FlightHaze");
+    static readonly int atmosphereId = Shader.PropertyToID("_FlightAtmosphere");
     readonly List<Material> materials = new List<Material>();
     readonly List<Mesh> ownedMeshes = new List<Mesh>();
     readonly Dictionary<PrimitiveType, Mesh> meshes = new Dictionary<PrimitiveType, Mesh>();
@@ -69,7 +70,7 @@ public sealed class ObservatoryRocketCabin
         Text(panel, "ROCKET ASCENT", new Vector2(-115f, 85f), new Vector2(790f, 36f), 24f, Color.white);
         altitudeText = Text(panel, "0 m", new Vector2(-115f, 30f), new Vector2(790f, 67f), 48f, new Color(0.35f, 1f, 0.98f));
         layerText = Text(panel, "Troposphere", new Vector2(-115f, -25f), new Vector2(790f, 40f), 23f, Color.white);
-        controlsText = Text(panel, "X: pause   B: cancel", new Vector2(-115f, -73f), new Vector2(790f, 34f), 21f, new Color(0.72f, 0.83f, 0.88f));
+        controlsText = Text(panel, "X: pause   A/Enter: skip   B: cancel", new Vector2(-115f, -73f), new Vector2(790f, 34f), 21f, new Color(0.72f, 0.83f, 0.88f));
         Image(panel, "Altitude line", new Vector2(360f, 0f), new Vector2(3f, 180f), new Color(0.43f, 0.62f, 0.70f));
         for (int tick = 0; tick <= 4; tick++)
         {
@@ -123,19 +124,21 @@ public sealed class ObservatoryRocketCabin
         city.localScale = Vector3.one * Mathf.Lerp(1f, 0.16f, lower);
         city.localPosition = new Vector3(0f, -Mathf.Lerp(0f, 35f, lower), Mathf.Lerp(0f, 16f, lower));
         city.gameObject.SetActive(altitude < 24000f);
-        clouds.localPosition = new Vector3(0f, Mathf.Lerp(18f, -23f, Mathf.Clamp01(altitude / 17000f)), 0f);
+        float cloudY = Mathf.Lerp(18f, -23f, Mathf.Clamp01(altitude / 17000f));
+        clouds.localPosition = new Vector3(0f, cloudY - 65f * AltitudeBlend(12000f, 28000f, altitude), 0f);
         clouds.gameObject.SetActive(altitude < 28000f);
         float passing = Mathf.Clamp01((altitude - 2500f) / 14000f);
-        airplane.localPosition = new Vector3(Mathf.Lerp(-23f, 24f, passing), Mathf.Lerp(12f, -9f, passing), 35f);
+        airplane.localPosition = new Vector3(Mathf.Lerp(-43f, 43f, passing), Mathf.Lerp(12f, -9f, passing), 35f);
         airplane.gameObject.SetActive(altitude > 2500f && altitude < 19000f);
         SkyColor = Color.Lerp(new Color(0.29f, 0.61f, 0.84f), Color.black, Mathf.SmoothStep(0f, 1f, altitude / SpaceSkyStartMetres));
-        //keep Earth's size fixed and put it behind the clouds as the cabin climbs away
-        float recede = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(12000f, 100000f, altitude));
-        earth.gameObject.SetActive(altitude > 12000f);
-        earth.localPosition = Vector3.Lerp(new Vector3(0f, -45f, 95f), new Vector3(32f, -71f, 154f), recede) * 2.2f;
-        //the curve is already there when it starts to show through the haze
+        //keep the same close horizon behind the clouds and let it fall away at one bearing
+        Vector3 farEarth = new Vector3(32f, -71f, 154f);
+        Vector3 nearEarth = new Vector3(farEarth.x * 64f / farEarth.z, -58.4f, 64f);
+        earth.localPosition = Vector3.Lerp(nearEarth, farEarth, AltitudeBlend(2500f, 100000f, altitude)) * 2.2f;
+        //start seeing the horizon through the air before the troposphere ends
         earthLighting.SetColor(hazeColorId, SkyColor);
-        earthLighting.SetFloat(hazeId, 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(12000f, 32000f, altitude)));
+        earthLighting.SetFloat(hazeId, 1f - AltitudeBlend(2500f, 50000f, altitude));
+        earthLighting.SetFloat(atmosphereId, AltitudeBlend(3500f, 18000f, altitude) * (1f - AltitudeBlend(28000f, 94000f, altitude)));
         earthSurface.SetPropertyBlock(earthLighting);
         altitudeText.text = altitude < 1000f ? altitude.ToString("0") + " m" : (altitude / 1000f).ToString("0.0") + " km";
         layerText.text = altitude >= 100000f ? "Edge of space / 100 km" : altitude >= 85000f ? "Thermosphere" :
@@ -145,7 +148,12 @@ public sealed class ObservatoryRocketCabin
 
     public void SetPaused(bool value)
     {
-        controlsText.text = value ? "PAUSED   X: resume   B: cancel" : "X: pause   B: cancel";
+        controlsText.text = value ? "PAUSED   X: resume   A/Enter: skip   B: cancel" : "X: pause   A/Enter: skip   B: cancel";
+    }
+
+    static float AltitudeBlend(float start, float end, float altitude)
+    {
+        return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(start, end, altitude));
     }
 
     public void Dispose()

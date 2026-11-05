@@ -5,7 +5,7 @@ using UnityEngine;
 //the cabin stays still while the outside view follows a compressed trip to space
 public class ObservatoryRocketAscent : MonoBehaviour
 {
-    public float ascentSeconds = 30f;
+    public float ascentSeconds = 24f;
     public bool IsActive { get; private set; }
     public bool IsPaused { get; private set; }
     public bool WasCancelled { get; private set; }
@@ -113,11 +113,8 @@ public class ObservatoryRocketAscent : MonoBehaviour
         if (!IsActive || IsPaused || WasCancelled || HasArrived) return;
         elapsed = Mathf.Min(elapsed + Time.unscaledDeltaTime, Mathf.Max(1f, ascentSeconds));
         float progress = elapsed / Mathf.Max(1f, ascentSeconds);
-        //give the buildings and aircraft time on screen before the upper atmosphere
-        if (progress < 0.2f) AltitudeMetres = Mathf.Lerp(0f, 1000f, progress / 0.2f);
-        else if (progress < 0.45f) AltitudeMetres = Mathf.Lerp(1000f, 12000f, (progress - 0.2f) / 0.25f);
-        else if (progress < 0.75f) AltitudeMetres = Mathf.Lerp(12000f, 50000f, (progress - 0.45f) / 0.3f);
-        else AltitudeMetres = Mathf.Lerp(50000f, 100000f, (progress - 0.75f) / 0.25f);
+        //build speed gradually so the altitude does not jump between layers
+        AltitudeMetres = 100000f * progress * progress * progress;
         ApplyAltitude();
     }
 
@@ -152,6 +149,12 @@ public class ObservatoryRocketAscent : MonoBehaviour
     public void Cancel()
     {
         if (IsActive) WasCancelled = true;
+    }
+
+    public void Skip()
+    {
+        //leave the window as it is until the tour fades to the parked ship
+        if (IsActive && !WasCancelled) elapsed = Mathf.Max(1f, ascentSeconds);
     }
 
     public void End()

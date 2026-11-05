@@ -4,11 +4,12 @@ The Earth reveal's right grip / V action now runs a cockpit ascent on every swit
 
 ## Try it
 
-Open Arrival or Observatory in Unity 6000.5.10f1. Follow the introduction, press A / Enter to reveal Earth, then press right grip / V to launch. Look around the cabin and through its open 3D window. The ascent takes 30 seconds, followed by the hatch opening and a short automatic move to the observation ledge. The rocket stays parked behind the learner.
+Open Arrival or Observatory in Unity 6000.5.10f1. Follow the introduction, press A / Enter to reveal Earth, then press right grip / V to launch. Look around the cabin and through its open 3D window. The ascent takes 24 seconds, followed by the hatch opening and a short automatic move to the observation ledge. The rocket stays parked behind the learner.
 
 - X: pause or resume the ascent or guided exit. This is separate from the lesson's pause setting.
+- A / Enter: skip the ascent and start the normal hatch exit.
 - B: cancel the trip and return to the ground Earth reveal.
-- A, time scrubbing and Sun-path/terrain controls are gated during flight.
+- Time scrubbing and Sun-path/terrain controls are gated during flight.
 - Another right grip / V after returning from space starts a fresh ascent.
 
 The altitude dashboard shows metres below 1 km, kilometres above that, a vertical metric scale and the approximate atmosphere layer. Buildings, clouds, an aircraft and a curved Earth provide visual height cues. A quiet, generated cabin engine sound pauses with the ascent. Head tracking stays active; joystick movement, teleporting and snap turning remain disabled during the trip and station observation.

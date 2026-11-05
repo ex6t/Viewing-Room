@@ -108,6 +108,14 @@ public class ObservatoryModelDisplay : MonoBehaviour
             if (groundSky == null) groundSky = groundCamera.gameObject.AddComponent<Skybox>();
             groundSky.material = observation.skyMaterial;
         }
+        if (playerCamera != null && observation.skyMaterial != null)
+        {
+            //urp reads a local skybox material even when the component is disabled
+            Skybox playerGroundSky = GetPlayerSkybox();
+            playerGroundSky.material = observation.skyMaterial;
+            playerGroundSky.enabled = true;
+            playerCamera.clearFlags = CameraClearFlags.Skybox;
+        }
     }
 
     public void SetVisible(bool visible)
