@@ -20,13 +20,13 @@ The altitude dashboard shows metres below 1 km, kilometres above that, a vertica
 
 The cockpit is placed once at the initial tracked eye position with a level yaw orientation. The ascent never animates the tracked camera or XR Origin. Exterior scenery changes around the stable cockpit, with actual stereo rendering and head parallax through the window. The existing monocular sky monitor is not used as the rocket window.
 
-The upper view shares the Observatory globe mesh, texture and material. The California side of the curve emerges through haze behind the clouds. The globe holds its size and moves steadily farther from the cabin, so the visible horizon descends without first sliding upward into view. The blue background reaches black at 55 km, then the cabin camera fades in the inherited HubStation nebula at the same orientation as the arrival view. The flight uses a private sky material so its fade does not change the scene sky or the station material. The globe's apparent distance and lighting through the window are staged for the lesson.
+The flight starts from a private copy of the live Observatory sky. Overhead blue darkens faster than the lower sky, and the atmosphere fades to black at 100 km. The aligned HubStation nebula fades in after the crossing. The flight Earth uses the Observatory globe texture and material on a refined copy of its mesh. The mesh stays disabled through 100 km. Its close horizon then enters the bottom of the window, and the globe recedes as the indicated altitude increases. The framed view is staged for the lesson. The distance-to-radius ratio follows the displayed altitude.
 
 `ObservatoryRocketArrival` then places the parked `Resources/Observatory/Rocket Ship` prefab at the captured launch heading. Its front hatch opens for 0.85 seconds before the XR Origin moves forward 2.4 metres over 3.6 seconds. This is automatic, level translation with no forced rotation or bob; the tracked camera's local pose remains owned by tracking. The station, Sun/Earth display, sky monitor, captions and clock are positioned for the endpoint. Looking around during ascent does not turn the dock to match the user's head.
 
 The arrival retains its exact owned translation after reaching the ledge. Returning to Earth, cancellation, lesson completion or teardown removes that offset under the view transition and hides the ship. Per-frame deltas preserve unrelated tracking/recentering changes. The same guided locomotion lock stays active throughout; no walking input or teleport destinations are introduced.
 
-One educational `AltitudeMetres` value drives scenery, sky colour, layer labels and the metric indicator. The presentation compresses distance and time; the existing enlarged Earth/Sun model is not used to measure altitude. Approximate layer thresholds are 12, 50 and 85 km, with the final marker at 100 km. Reaching that marker does not imply entering orbit. The science lesson's elapsed days and pause flag remain unchanged during the journey.
+One educational `AltitudeMetres` value drives scenery, sky colour, layer labels and the metric indicator. NASA's approximate thresholds in this range are 12 km for the stratosphere, 50 km for the mesosphere and 80 km for the thermosphere. The conventional 100 km Kármán line falls inside the thermosphere. The cabin continues to 600 km before the guided arrival. The science lesson's elapsed days and pause flag stay fixed during the journey.
 
 The prototype temporarily isolates its rendering on layer 30 (unused in the existing scene), then restores camera mask, clear flags, background colour, far clip and the local Skybox material and enabled state before the space display saves its ground baseline. Auxiliary monitor cameras are paused during flight. Path and terrain settings are captured, suppressed and restored on normal completion or B cancellation. Disabling the whole lesson keeps its existing behaviour of restoring scenery and hiding the path.
 
@@ -34,8 +34,7 @@ The existing Sun material's included unlit shader is reused with solid tinted ma
 
 ## Research and comfort
 
-- NASA, [Earth's Atmospheric Layers](https://www.nasa.gov/image-article/earths-atmospheric-layers-3/): approximate atmosphere structure; real boundary heights vary.
-- NASA, [Interesting Fact of the Month 2022](https://www.nasa.gov/space-science-and-astrobiology-at-ames/interesting-fact-of-the-month-current/interesting-fact-of-the-month-2022/): the conventional 100 km Karman line and the absence of a sharp physical edge.
+- NASA, [Earth’s Atmosphere: A Multi-layered Cake](https://science.nasa.gov/earth/earth-atmosphere/earths-atmosphere-a-multi-layered-cake/): approximate layer boundaries and the conventional 100 km Kármán line.
 - Meta, [Locomotion comfort and usability](https://developers.meta.com/vr/design/locomotion-comfort-usability/): predictable movement, visual references and reducing uncomfortable acceleration/optic flow.
 
 The cabin has no scripted head rotation, roll or shake. Comfortable movement and text readability still require physical Quest testing with multiple users.
@@ -59,3 +58,5 @@ The Android IL2CPP ARM64 build succeeded from the local Editor checkout in 7 min
 Test captures, the validation source and logs are stored outside the repository under `Documents/OrbitBackups/RocketTransition-20261102/Evidence`. The run retained the user's existing local scene/settings edits; those edits are outside the prototype commit.
 
 The November 4 window update passed 29 additional Unity Play Mode checks, including the shared Earth mesh and texture, matching cabin and station skies, and camera/monitor restoration after cancellation and return. Editor renders cover 35, 85 and 100 km. The check used a shortened flight to exercise the handoff and captured the exterior at exact altitudes. These results cover the updated Editor prototype, with no new APK or headset test.
+
+The November 5 atmosphere fix passed 47 Unity Play Mode checks. Exact altitude captures checked the blue-to-black gradient, layer labels, and Earth visibility at the 100 km crossing. A separate, unpaused 24-second ride reached 600 km and completed the parked-rocket handoff. Cancel and return restored the original camera, sky and monitors.

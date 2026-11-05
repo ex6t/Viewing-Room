@@ -6,20 +6,19 @@ using UnityEngine.Rendering;
 //the cabin stays still while the scenery follows our teaching altitude
 public sealed class ObservatoryRocketCabin
 {
-    internal const float SpaceSkyStartMetres = 55000f;
-    public Color SkyColor { get; private set; }
-
+    //nasa's atmosphere guide gives approximate boundaries and the 100 km convention
+    const float StratosphereMetres = 12000f;
+    const float MesosphereMetres = 50000f;
+    const float ThermosphereMetres = 80000f;
+    internal const float KarmanLineMetres = 100000f;
+    internal const float ArrivalMetres = 600000f;
+    const float earthMeanRadiusMetres = 6371000f;
     const float earthRadius = 58f * 2.2f;
-    static readonly Vector3 farEarth = new Vector3(32f, -71f, 154f) * 2.2f;
-    static readonly Vector3 earthBearing = Vector3.ProjectOnPlane(farEarth, Vector3.up).normalized;
-    static readonly float farEarthAngle = Mathf.Asin(earthRadius / farEarth.magnitude);
-    static readonly float farEarthLimb = Mathf.Asin(farEarth.y / farEarth.magnitude) + farEarthAngle;
     readonly Transform root, city, clouds, airplane, earth;
     readonly MeshRenderer earthSurface;
     readonly MaterialPropertyBlock earthLighting = new MaterialPropertyBlock();
     static readonly int sunDirectionId = Shader.PropertyToID("_ModelSunDirection");
     static readonly int hazeColorId = Shader.PropertyToID("_FlightHazeColor");
-    static readonly int hazeId = Shader.PropertyToID("_FlightHaze");
     static readonly int atmosphereId = Shader.PropertyToID("_FlightAtmosphere");
     readonly List<Material> materials = new List<Material>();
     readonly List<Mesh> ownedMeshes = new List<Mesh>();
@@ -77,11 +76,11 @@ public sealed class ObservatoryRocketCabin
         layerText = Text(panel, "Troposphere", new Vector2(-115f, -25f), new Vector2(790f, 40f), 23f, Color.white);
         controlsText = Text(panel, "X: pause   A/Enter: skip   B: cancel", new Vector2(-115f, -73f), new Vector2(790f, 34f), 21f, new Color(0.72f, 0.83f, 0.88f));
         Image(panel, "Altitude line", new Vector2(360f, 0f), new Vector2(3f, 180f), new Color(0.43f, 0.62f, 0.70f));
-        for (int tick = 0; tick <= 4; tick++)
+        for (int tick = 0; tick <= 6; tick++)
         {
-            float y = -90f + tick * 45f;
+            float y = -90f + tick * 30f;
             Image(panel, "Altitude tick", new Vector2(369f, y), new Vector2(20f, 2f), Color.white);
-            Text(panel, (tick * 25).ToString() + (tick == 4 ? " km" : ""), new Vector2(432f, y), new Vector2(92f, 27f), 19f, Color.white);
+            Text(panel, (tick * 100).ToString() + (tick == 6 ? " km" : ""), new Vector2(432f, y), new Vector2(92f, 27f), 19f, Color.white);
         }
         altitudeMarker = Image(panel, "Altitude marker", new Vector2(345f, -90f), new Vector2(34f, 8f), new Color(0.35f, 1f, 0.98f));
         Text(root, "Time-compressed ascent / approximate layer boundaries", new Vector3(0f, 0.89f, 1.65f), new Vector2(1150f, 36f), 19f, 0.00165f);
@@ -125,37 +124,36 @@ public sealed class ObservatoryRocketCabin
 
     public void SetAltitude(float altitudeMeters)
     {
-        float altitude = Mathf.Clamp(altitudeMeters, 0f, 100000f);
+        float altitude = Mathf.Clamp(altitudeMeters, 0f, ArrivalMetres);
         float lower = Mathf.Clamp01(altitude / 3000f);
         city.localScale = Vector3.one * Mathf.Lerp(1f, 0.16f, lower);
         city.localPosition = new Vector3(0f, -Mathf.Lerp(0f, 35f, lower), Mathf.Lerp(0f, 16f, lower));
-        city.gameObject.SetActive(altitude < 24000f);
-        float cloudY = Mathf.Lerp(18f, -23f, Mathf.Clamp01(altitude / 17000f));
-        clouds.localPosition = new Vector3(0f, cloudY - 65f * AltitudeBlend(12000f, 28000f, altitude), 0f);
-        clouds.gameObject.SetActive(altitude < 28000f);
-        float passing = Mathf.Clamp01((altitude - 2500f) / 14000f);
+        city.gameObject.SetActive(altitude < StratosphereMetres);
+        float cloudY = Mathf.Lerp(18f, -36f, Mathf.Clamp01(altitude / 14000f));
+        clouds.localPosition = new Vector3(0f, cloudY, 0f);
+        clouds.gameObject.SetActive(altitude < 14000f);
+        float passing = Mathf.InverseLerp(2500f, 15500f, altitude);
         airplane.localPosition = new Vector3(Mathf.Lerp(-43f, 43f, passing), Mathf.Lerp(12f, -9f, passing), 35f);
-        airplane.gameObject.SetActive(altitude > 2500f && altitude < 19000f);
-        Color blueAir = Color.Lerp(new Color(0.29f, 0.61f, 0.84f), new Color(0.06f, 0.14f, 0.25f),
-            AltitudeBlend(6000f, 24000f, altitude));
-        SkyColor = Color.Lerp(blueAir, Color.black, AltitudeBlend(1000f, SpaceSkyStartMetres, altitude));
-        //start with a wide horizon under the cabin, then let the same Earth recede
-        float pullAway = AltitudeBlend(16000f, 100000f, altitude);
-        float angularRadius = Mathf.Lerp(72f * Mathf.Deg2Rad, farEarthAngle, pullAway);
-        float limb = Mathf.Lerp(-3.5f * Mathf.Deg2Rad, farEarthLimb, pullAway);
-        float elevation = limb - angularRadius;
-        Vector3 heading = Vector3.Slerp(Vector3.forward, earthBearing, pullAway);
-        Vector3 direction = heading * Mathf.Cos(elevation) + Vector3.up * Mathf.Sin(elevation);
-        earth.localPosition = direction * (earthRadius / Mathf.Sin(angularRadius));
-        //the air tints the surface but never hides it
-        earthLighting.SetColor(hazeColorId, SkyColor);
-        earthLighting.SetFloat(hazeId, 0.38f * (1f - AltitudeBlend(9000f, 50000f, altitude)));
-        earthLighting.SetFloat(atmosphereId, AltitudeBlend(3500f, 18000f, altitude) * (1f - AltitudeBlend(28000f, 94000f, altitude)));
-        earthSurface.SetPropertyBlock(earthLighting);
-        altitudeText.text = altitude < 1000f ? altitude.ToString("0") + " m" : (altitude / 1000f).ToString("0.0") + " km";
-        layerText.text = altitude >= 100000f ? "Edge of space / 100 km" : altitude >= 85000f ? "Thermosphere" :
-            altitude >= 50000f ? "Mesosphere" : altitude >= 12000f ? "Stratosphere" : "Troposphere";
-        altitudeMarker.anchoredPosition = new Vector2(345f, -90f + altitude / 100000f * 180f);
+        airplane.gameObject.SetActive(altitude > 2500f && altitude < 15500f);
+        earth.gameObject.SetActive(altitude > KarmanLineMetres);
+        if (earth.gameObject.activeSelf)
+        {
+            //bring the nearby horizon in from below the window as the view turns back toward Earth
+            float distance = earthRadius * (1f + altitude / earthMeanRadiusMetres);
+            float angularRadius = Mathf.Asin(earthRadius / distance);
+            float limb = Mathf.Lerp(-17f, -2f, AltitudeBlend(KarmanLineMetres, 190000f, altitude)) * Mathf.Deg2Rad;
+            float elevation = limb - angularRadius;
+            earth.localPosition = new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * distance;
+            earthLighting.SetColor(hazeColorId, new Color(0.10f, 0.24f, 0.46f));
+            earthLighting.SetFloat(atmosphereId, Mathf.Lerp(0.6f, 0.28f, AltitudeBlend(KarmanLineMetres, ArrivalMetres, altitude)));
+            earthSurface.SetPropertyBlock(earthLighting);
+        }
+        altitudeText.text = altitude < 1000f ? Mathf.FloorToInt(altitude) + " m" :
+            (Mathf.Floor(altitude / 100f) / 10f).ToString("0.0") + " km";
+        layerText.text = altitude >= KarmanLineMetres ? "Thermosphere / Kármán line crossed" :
+            altitude >= ThermosphereMetres ? "Thermosphere" : altitude >= MesosphereMetres ? "Mesosphere" :
+            altitude >= StratosphereMetres ? "Stratosphere" : "Troposphere";
+        altitudeMarker.anchoredPosition = new Vector2(345f, -90f + altitude / ArrivalMetres * 180f);
     }
 
     public void SetPaused(bool value)
