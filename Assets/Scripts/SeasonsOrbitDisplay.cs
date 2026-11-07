@@ -359,7 +359,7 @@ public class SeasonsOrbitDisplay : MonoBehaviour
         tablet.message.fontSize = 31f;
         tablet.hint.fontSize = 24f;
         tablet.Show("SEASONS / ORBIT GUIDE",
-            "Point at Earth and hold grip to drag.\nTry June and December at the same time of day.\nIn the Editor, use mouse drag or 1–4.",
+            "Point at Earth and hold grip to drag.\nIn the Editor, use mouse drag or 1–4.",
             Controls);
         tablet.RevealText();
 
