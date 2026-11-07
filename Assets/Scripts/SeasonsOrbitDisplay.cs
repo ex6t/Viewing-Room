@@ -1,7 +1,6 @@
 using System;
 using TMPro;
 using UnityEngine;
-using UnityEngine.AI;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using UnityEngine.XR.Interaction.Toolkit;
@@ -13,9 +12,7 @@ public class SeasonsOrbitDisplay : MonoBehaviour
     [SerializeField] Camera playerCamera;
     [SerializeField] EarthOrbitModel orbitPrefab;
     [SerializeField] RobotTablet tabletPrefab;
-    [SerializeField] GameObject robotPrefab;
-    [SerializeField] Transform station;
-    [SerializeField] Material deckMaterial;
+    [SerializeField] Transform orbitPlacement;
     [SerializeField] Mesh inheritedPlanetMesh;
     [SerializeField] Material inheritedEarthMaterial;
     [SerializeField] Material inheritedSunMaterial;
@@ -23,6 +20,7 @@ public class SeasonsOrbitDisplay : MonoBehaviour
     [SerializeField] TrailRenderer[] inheritedSeasonTrails;
 
     const int SamplesPerSeason = 40;
+    const float OrbitStrokeScale = 3.5f;
     const float SnapDegrees = 2f;
     const float MaxRayDistance = 280f;
     const float OrbitRadius = 50f;
@@ -50,13 +48,13 @@ public class SeasonsOrbitDisplay : MonoBehaviour
 
     void Awake()
     {
-        if (playerCamera == null || orbitPrefab == null || tabletPrefab == null || robotPrefab == null ||
-            station == null || deckMaterial == null || inheritedPlanetMesh == null || inheritedEarthMaterial == null ||
+        if (playerCamera == null || orbitPrefab == null || tabletPrefab == null || orbitPlacement == null ||
+            inheritedPlanetMesh == null || inheritedEarthMaterial == null ||
             inheritedSunMaterial == null || earthLightingMaterial == null ||
             inheritedSeasonTrails == null || inheritedSeasonTrails.Length != SeasonsCalendar.MilestoneCount ||
             Array.Exists(inheritedSeasonTrails, trail => trail == null))
         {
-            Debug.LogError("[SeasonsOrbitDisplay] Assign the camera, station, planet assets, season trails and guide.", this);
+            Debug.LogError("[SeasonsOrbitDisplay] Assign the camera, orbit placement, planet assets, season trails and guide.", this);
             enabled = false;
             return;
         }
@@ -71,7 +69,8 @@ public class SeasonsOrbitDisplay : MonoBehaviour
         foreach (Transform child in OrbitModel.transform)
             if (child != orbitPlane)
                 child.gameObject.SetActive(false);
-        orbitPlane.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        //tilt the whole display so the same orbit math still drives the ring and the grab
+        orbitPlane.SetPositionAndRotation(orbitPlacement.position, orbitPlacement.rotation);
         //reuse the inherited globe and texture with the shared observer model lighting
         litEarth = new Material(earthLightingMaterial);
         litEarth.SetTexture("_BaseMap", inheritedEarthMaterial.GetTexture("_BaseMap"));
@@ -83,15 +82,7 @@ public class SeasonsOrbitDisplay : MonoBehaviour
         observation.earthOrbit = OrbitModel;
         observation.globeAxis = OrbitModel.earth;
         observation.globeRenderer = earthRenderer;
-        AddViewingStep();
         AddStationLight();
-
-        var robot = Instantiate(robotPrefab, exhibit.transform);
-        robot.GetComponent<NavMeshAgent>().enabled = false;
-        robot.GetComponent<Collider>().enabled = false;
-        robot.transform.localPosition = new Vector3(-1.10f, 0f, 0.32f);
-        robot.transform.localRotation = Quaternion.Euler(0f, 151f, 0f);
-        robot.transform.localScale = Vector3.one * 0.72f;
         exhibit.SetActive(true);
 
         if (!observation.InitializeModel())
@@ -102,7 +93,7 @@ public class SeasonsOrbitDisplay : MonoBehaviour
         CreateSegments();
         CreateAxis();
         SetUpGrab();
-        ShowRobotPrompt();
+        ShowOrbitPrompt();
 
         double start = SeasonsVisit.TryTakeOrbitSelection(out double savedDays) ? savedDays :
             SeasonsCalendar.WithSolarTime(SeasonsCalendar.MilestoneDays(0), EarthObservationModel.InitialSolarHours);
@@ -124,19 +115,6 @@ public class SeasonsOrbitDisplay : MonoBehaviour
         return renderer;
     }
 
-    void AddViewingStep()
-    {
-        //raise the standing spot just enough to see the close arc over the station rail
-        var step = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        step.name = "Orbit Viewing Step";
-        step.layer = 2;
-        step.transform.SetParent(station, false);
-        float height = transform.position.y - station.position.y;
-        step.transform.SetPositionAndRotation(transform.position - Vector3.up * (height * 0.5f), transform.rotation);
-        step.transform.localScale = new Vector3(2.6f, height, 1.6f);
-        step.GetComponent<MeshRenderer>().sharedMaterial = deckMaterial;
-    }
-
     void AddStationLight()
     {
         var light = new GameObject("Seasons Deck Light").AddComponent<Light>();
@@ -146,16 +124,6 @@ public class SeasonsOrbitDisplay : MonoBehaviour
         light.range = 13f;
         light.intensity = 9f;
     }
-
-#if UNITY_EDITOR
-    void Start()
-    {
-        //give mouse users the overlook view when no headset or simulated head pose is active
-        if (!UnityEngine.XR.XRSettings.isDeviceActive &&
-            !UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head).isValid)
-            playerCamera.transform.Rotate(26f, 0f, 0f, Space.Self);
-    }
-#endif
 
     void OnEnable()
     {
@@ -316,11 +284,12 @@ public class SeasonsOrbitDisplay : MonoBehaviour
     {
         OrbitModel.orbitPath.enabled = false;
         Transform plane = OrbitModel.orbitPlane;
+        float viewDistance = Vector3.Distance(plane.position, transform.position);
         for (int i = 0; i < SeasonsCalendar.MilestoneCount; i++)
         {
-            //keep the original trail style but draw the full ring before Earth moves
+            //draw the full ring up front and thicken the inherited strokes for the station view
             TrailRenderer trail = inheritedSeasonTrails[i];
-            LineRenderer arc = CreateLine(trail.name, trail.startColor, trail.widthMultiplier);
+            LineRenderer arc = CreateLine(trail.name, trail.startColor, trail.widthMultiplier * OrbitStrokeScale);
             arc.widthCurve = trail.widthCurve;
             arc.colorGradient = trail.colorGradient;
             arc.alignment = trail.alignment;
@@ -339,9 +308,14 @@ public class SeasonsOrbitDisplay : MonoBehaviour
             LineRenderer marker = CreateLine(SeasonsCalendar.MilestoneName(i) + " marker", Color.white, 0.5f);
             marker.SetPosition(0, landmark * 0.97f);
             marker.SetPosition(1, landmark * 1.11f);
+            //give the globes room and keep the June label clear of the bright sky
+            float labelOffset = i == 0 ? 1.26f : i == 1 ? 1.05f : 1.14f;
+            Vector3 labelPoint = plane.TransformPoint(landmark * labelOffset + Vector3.up * 3f);
+            if (i == 1) labelPoint -= transform.right * 15f + Vector3.up * 1.25f;
+            float labelSize = 22f * Vector3.Distance(labelPoint, transform.position) / viewDistance;
             TextMeshPro label = CreateLabel(SeasonsCalendar.MilestoneName(i),
-                SeasonsCalendar.MilestoneName(i), plane, 24f, Color.Lerp(trail.startColor, Color.white, 0.24f));
-            label.transform.localPosition = landmark * 1.24f + Vector3.up * 3.8f;
+                SeasonsCalendar.MilestoneName(i), plane, labelSize, Color.Lerp(trail.startColor, Color.white, 0.52f));
+            label.transform.position = labelPoint;
             milestoneLabels[i] = label;
         }
     }
@@ -372,25 +346,25 @@ public class SeasonsOrbitDisplay : MonoBehaviour
         line.SetPropertyBlock(tint);
     }
 
-    void ShowRobotPrompt()
+    void ShowOrbitPrompt()
     {
         var anchor = new GameObject("Seasons Guide Anchor").transform;
         anchor.SetParent(transform, false);
-        anchor.localPosition = new Vector3(0.12f, 0.81f, 2.62f);
+        anchor.localPosition = new Vector3(1.68f, 0.42f, 2.85f);
+        anchor.localRotation = Quaternion.Euler(18f, 30f, 0f);
         RobotTablet tablet = Instantiate(tabletPrefab, anchor);
         tablet.playerCamera = playerCamera.transform;
         tablet.fixedAnchor = anchor;
-        tablet.transform.localScale *= 1.18f;
         tablet.heading.fontSize = 27f;
         tablet.message.fontSize = 31f;
         tablet.hint.fontSize = 24f;
         tablet.Show("SEASONS / ORBIT GUIDE",
-            "Look down over the ring. Point at Earth and hold grip to drag.\nTry June and December at the same time of day.\nIn the Editor, use mouse drag or 1–4.",
+            "Point at Earth and hold grip to drag.\nTry June and December at the same time of day.\nIn the Editor, use mouse drag or 1–4.",
             Controls);
         tablet.RevealText();
 
-        readout = CreateLabel("Selected date and time", string.Empty, transform, 0.51f, Color.white);
-        readout.transform.localPosition = new Vector3(0.12f, 0.45f, 2.62f);
+        readout = CreateLabel("Selected date and time", string.Empty, anchor, 0.51f, Color.white);
+        readout.transform.localPosition = new Vector3(0f, -0.32f, 0f);
     }
 
     TextMeshPro CreateLabel(string objectName, string label, Transform parent, float size, Color color)

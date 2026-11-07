@@ -1887,7 +1887,7 @@ Transform:
   m_GameObject: {fileID: 483924699}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 118.3, y: 75.2, z: 0}
+  m_LocalPosition: {x: 88, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -7876,8 +7876,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1349681853}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 123.5, y: 73, z: 3.1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 90.5, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -7888,7 +7888,7 @@ Transform:
   - {fileID: 334956239}
   - {fileID: 241089006}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1350380101
 GameObject:
   m_ObjectHideFlags: 0
@@ -15013,7 +15013,7 @@ Transform:
   m_GameObject: {fileID: 6376112834509601001}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 118.3, y: 75.2, z: 0}
+  m_LocalPosition: {x: 88, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -15034,9 +15034,7 @@ MonoBehaviour:
   playerCamera: {fileID: 1453423067}
   orbitPrefab: {fileID: 1087400383780557966, guid: 3d852d53eee8346029117db98960593b, type: 3}
   tabletPrefab: {fileID: 6326458984454280421, guid: 383378392267244d08a12583b8506f61, type: 3}
-  robotPrefab: {fileID: 3270092872052030401, guid: 0e4d802c3235642238ba67f27be381f6, type: 3}
-  station: {fileID: 1349681854}
-  deckMaterial: {fileID: 2100000, guid: 3077630c2b552084084eefe0c912c1b5, type: 2}
+  orbitPlacement: {fileID: 6376112834509601015}
   inheritedPlanetMesh: {fileID: 4300000, guid: b82e0d2b8cc9ee64cacfa0b6e51ff1a3, type: 3}
   inheritedEarthMaterial: {fileID: 2100000, guid: 9129bad9aad7f394aa91b2eb46de21c8, type: 2}
   inheritedSunMaterial: {fileID: 2100000, guid: 8be537dca970c394bb90ae21eb535132, type: 2}
@@ -15066,6 +15064,37 @@ TrailRenderer:
   m_CorrespondingSourceObject: {fileID: 7768227749430428521, guid: 6bda14c3841e05746ba77ce8f6f04d5f, type: 3}
   m_PrefabInstance: {fileID: 3244962290869809672}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &6376112834509601014
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6376112834509601015}
+  m_Layer: 0
+  m_Name: Seasons Orbit Placement
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6376112834509601015
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6376112834509601014}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: -0.41469324, w: 0.90996127}
+  m_LocalPosition: {x: 0, y: 24.75, z: -6}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -49}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -15082,3 +15111,4 @@ SceneRoots:
   - {fileID: 1875087786}
   - {fileID: 483924700}
   - {fileID: 6376112834509601002}
+  - {fileID: 6376112834509601015}
