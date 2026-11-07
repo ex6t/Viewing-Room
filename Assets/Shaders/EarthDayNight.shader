@@ -7,6 +7,9 @@ Shader "Viewing Room/Earth Day Night"
         _NightBrightness("Night Visibility", Range(0,0.2)) = 0.035
         _DayBrightness("Day Brightness", Range(0,3)) = 1.4
         _ModelSunDirection("Direction to the model Sun", Vector) = (-1,0,0,0)
+        [HideInInspector] _FlightHazeColor("Flight haze color", Color) = (0,0,0,1)
+        [HideInInspector] _FlightHaze("Flight haze", Range(0,1)) = 0
+        [HideInInspector] _FlightAtmosphere("Flight atmosphere", Range(0,1)) = 0
     }
     SubShader
     {
@@ -27,6 +30,9 @@ Shader "Viewing Room/Earth Day Night"
                 float4 _ModelSunDirection;
                 float _NightBrightness;
                 float _DayBrightness;
+                half4 _FlightHazeColor;
+                half _FlightHaze;
+                half _FlightAtmosphere;
             CBUFFER_END
             struct Attributes
             {
@@ -40,6 +46,7 @@ Shader "Viewing Room/Earth Day Night"
                 float4 positionCS : SV_POSITION;
                 float3 normalWS : TEXCOORD0;
                 float2 uv : TEXCOORD1;
+                float3 positionWS : TEXCOORD2;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
             Varyings Vertex(Attributes input)
@@ -48,6 +55,7 @@ Shader "Viewing Room/Earth Day Night"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 return output;
@@ -59,7 +67,18 @@ Shader "Viewing Room/Earth Day Night"
                 // This globe is a diagram above the same ground sky, so its light uses
                 // the research Sun in the model frame rather than the room's directional light.
                 float sunlight = max(0, dot(normalize(input.normalWS), normalize(_ModelSunDirection.xyz)));
-                return half4(surface * (_NightBrightness + sunlight * _DayBrightness), 1);
+                half3 litSurface = surface * (_NightBrightness + sunlight * _DayBrightness);
+                half3 color = lerp(litSurface, _FlightHazeColor.rgb, _FlightHaze);
+                if (_FlightAtmosphere > 0.001)
+                {
+                    //the air is darkest at the edge and the band thins on the way out
+                    float3 viewDirection = GetWorldSpaceNormalizeViewDir(input.positionWS);
+                    half facing = saturate(dot(normalize(input.normalWS), viewDirection));
+                    half edge = 1.0 - smoothstep(0.02, lerp(0.14, 0.50, _FlightAtmosphere), facing);
+                    half3 blueAir = _FlightHazeColor.rgb * 0.26 + half3(0.008, 0.023, 0.052);
+                    color = lerp(color, blueAir, 0.64 * _FlightAtmosphere * edge);
+                }
+                return half4(color, 1);
             }
             ENDHLSL
         }

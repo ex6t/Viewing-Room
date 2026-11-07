@@ -19,6 +19,7 @@ Shader "Viewing Room/Observatory Sky"
         _ObserverLatitude("Observer Latitude (Radians)", Float) = 0
         _SolarDeclination("Solar Declination (Radians)", Float) = 0
         _RevealBelowHorizon("Reveal Below Horizon", Range(0, 1)) = 0
+        _FlightSkyFade("Flight Sky Fade", Range(0, 1)) = 0
     }
 
     SubShader
@@ -68,6 +69,7 @@ Shader "Viewing Room/Observatory Sky"
                 float _ObserverLatitude;
                 float _SolarDeclination;
                 float _RevealBelowHorizon;
+                float _FlightSkyFade;
             CBUFFER_END
 
             struct Attributes
@@ -169,6 +171,13 @@ Shader "Viewing Room/Observatory Sky"
                     groundSky = lerp(groundSky, pathColor, visiblePath);
                     float horizon = 1.0 - smoothstep(0.0015, 0.0015 + max(fwidth(localDirection.y), 0.0004), abs(localDirection.y));
                     groundSky = lerp(groundSky, half3(0.8, 0.92, 1.0), horizon);
+                }
+
+                //the overhead blue fades ahead of the denser air along the horizon
+                if (_FlightSkyFade > 0.0)
+                {
+                    float altitudeGradient = smoothstep(-0.12, 0.55, localDirection.y);
+                    groundSky *= pow(saturate(1.0 - _FlightSkyFade), lerp(2.0, 4.0, altitudeGradient));
                 }
 
                 // A uniform dark backdrop avoids implying a second celestial viewpoint

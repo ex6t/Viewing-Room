@@ -3,7 +3,6 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 
 // A short observation and its explanation share one clock and one comfortable viewing position.
 public class ObservatoryTour : MonoBehaviour
@@ -36,6 +35,8 @@ public class ObservatoryTour : MonoBehaviour
     public float automaticHoursPerSecond = 0.5f;
     public string seasonsScene = "Assets/Scenes/Seasons.unity";
 
+    const float LookUpElevation = 55f;
+
     public TourStep CurrentStep { get; private set; }
     public bool IsGuided { get; private set; }
     public bool IsPresenting { get; private set; }
@@ -48,6 +49,7 @@ public class ObservatoryTour : MonoBehaviour
     bool usedTime;
     bool timeReady;
     bool skyPlaced;
+    bool fromSeasons;
     TourStep resumeStep;
     Coroutine transition;
     Material runtimeSky;
@@ -92,7 +94,13 @@ public class ObservatoryTour : MonoBehaviour
         clockStand.gameObject.SetActive(false);
         modelDisplay.SetVisible(false);
         ClearFade();
-        if (ObservatoryArrival.BeginObservation)
+        if (SeasonsVisit.TryTakeObservation(out double days))
+        {
+            viewFade.color = Color.black;
+            viewFade.gameObject.SetActive(true);
+            transition = StartCoroutine(ArriveFromSeasons(days));
+        }
+        else if (ObservatoryArrival.BeginObservation)
         {
             ObservatoryArrival.BeginObservation = false;
             viewFade.color = Color.black;
@@ -109,6 +117,44 @@ public class ObservatoryTour : MonoBehaviour
         welcome.ClearWelcome();
         StartGuidedTour();
         transition = StartCoroutine(BeginObservation(true));
+    }
+
+    IEnumerator ArriveFromSeasons(double days)
+    {
+        //let the welcome finish starting before the robot gives the seasons prompt
+        yield return null;
+        fromSeasons = true;
+        IsGuided = IsPresenting = IsPaused = true;
+        welcome.ClearWelcome();
+        CurrentStep = TourStep.Sky;
+        welcome.PauseLocomotion(true);
+        if (Application.isEditor) HideEditorGloves();
+        captionCanvas.gameObject.SetActive(true);
+        clockStand.gameObject.SetActive(true);
+        observation.SetDays(days);
+        ShowView(true);
+        bool sunIsHigh = observation.SunDirectionLocal.y >= Mathf.Sin(LookUpElevation * Mathf.Deg2Rad);
+        string intro = "Paused. X starts time.";
+        if (sunIsHigh) intro += "\nLook up for the Sun.";
+        else if (sunPath != null && HasHighSunPath()) intro += "\nShow path. Look up.";
+        ShowCaption(intro, 8f);
+        ShowSeasonHint(true);
+        controls.ResetInput();
+        RefreshClock();
+        yield return FadeView(false, 0.35f);
+        observation.SetSuspended(false);
+        transition = null;
+    }
+
+    void HideEditorGloves()
+    {
+        //the old glove meshes clip into the editor view before the controllers move
+        var origin = welcome.locomotion.playerOrigin;
+        if (origin == null) return;
+        foreach (Transform child in origin.GetComponentsInChildren<Transform>(true))
+            if (child.name == "Orbit Glove Left" || child.name == "Orbit Glove Right")
+                foreach (Renderer glove in child.GetComponentsInChildren<Renderer>(true))
+                    glove.forceRenderingOff = true;
     }
 
     void OnEnable()
@@ -142,15 +188,35 @@ public class ObservatoryTour : MonoBehaviour
             nextClock = Time.unscaledTimeAsDouble + 0.1;
         }
         caption.enabled = Time.unscaledTime < captionUntil;
-        string nextAction = CurrentStep == TourStep.Sky ? "A: see Earth" :
-            "R grip: " + (modelDisplay.IsSpaceView ? "sky" : "space") + "   A: next   B: back";
         bool introduceTime = !usedTime && CurrentStep == TourStep.Sky;
-        hint.text = introduceTime ? "Left stick: time   " + nextAction : nextAction;
-        if (sunPath != null)
-            hint.text += "\nY: path " + (sunPath.IsPathVisible ? "off" : "on") +
-                (sunPath.IsPathVisible ? "   L grip: terrain " + (sunPath.IsTerrainHidden ? "on" : "off") : "");
+        if (fromSeasons) ShowSeasonHint(introduceTime);
+        else
+        {
+            string nextAction = CurrentStep == TourStep.Sky ? "A: see Earth" :
+                "R grip: " + (modelDisplay.IsSpaceView ? "sky" : "space") + "   A: next   B: back";
+            hint.text = introduceTime ? "Left stick: time   " + nextAction : nextAction;
+            if (sunPath != null)
+                hint.text += "\nY: path " + (sunPath.IsPathVisible ? "off" : "on") +
+                    (sunPath.IsPathVisible ? "   L grip: terrain " + (sunPath.IsTerrainHidden ? "on" : "off") : "");
+        }
         float glow = introduceTime ? 0.3f + 0.3f * Mathf.Sin(Time.unscaledTime * 3f) : 0f;
         hint.color = Color.Lerp(hintColor, new Color(0.35f, 1f, 0.95f), glow);
+    }
+
+    void ShowSeasonHint(bool introduceTime)
+    {
+        bool editor = Application.isEditor;
+        string view = CurrentStep == TourStep.Sky ? (editor ? "Enter: Earth" : "A: Earth") :
+            (editor ? "V: " : "R grip: ") + (modelDisplay.IsSpaceView ? "sky" : "space");
+        string details = IsPaused ? "X: play" : "X: pause";
+        if (introduceTime && (sunPath == null || !sunPath.IsPathVisible))
+            details += editor ? "   Arrows: time" : "   Stick: time";
+        if (sunPath != null)
+        {
+            details += editor ? "   P: path" : "   Y: path";
+            if (sunPath.IsPathVisible) details += editor ? "   H: terrain" : "   L grip: terrain";
+        }
+        hint.text = view + "   B: seasons\n" + details;
     }
 
     public void StartGuidedTour()
@@ -179,27 +245,26 @@ public class ObservatoryTour : MonoBehaviour
         timeReady = false;
         controls.ResetInput();
         ShowCaption(introducing ? "Start with the sky above us." :
-            CurrentStep == TourStep.Sky ? "A winter day in California." : "Earth turns. Day becomes night.", introducing ? float.PositiveInfinity : 8f);
+            CurrentStep == TourStep.Sky ? (fromSeasons ? "Watch California's sky on this date." : "A winter day in California.") :
+            "Earth turns. Day becomes night.", introducing ? float.PositiveInfinity : 8f);
         hint.text = introducing ? "A: watch a day" : "Left stick: time";
-        PlayLine(introducing ? introductionLine : CurrentStep == TourStep.Sky ? skyLine : earthLine);
+        if (!fromSeasons || CurrentStep != TourStep.Sky)
+            PlayLine(introducing ? introductionLine : CurrentStep == TourStep.Sky ? skyLine : earthLine);
         HoldForLine(3f);
         RefreshClock();
     }
 
     public void ContinueLesson()
     {
+        if (rocketAscent != null && rocketAscent.IsActive)
+        {
+            rocketAscent.Skip();
+            return;
+        }
         if (IsTransitioning || welcome.IsShowing) return;
         if (CurrentStep == TourStep.Complete)
         {
-            if (string.IsNullOrWhiteSpace(seasonsScene) || !Application.CanStreamedLevelBeLoaded(seasonsScene))
-            {
-                ShowCaption("Seasons is unavailable. You can replay this lesson.", float.PositiveInfinity);
-                hint.text = "A: retry seasons   B: watch again";
-                controls.ResetInput();
-                Debug.LogWarning("[ObservatoryTour] Enable the Seasons scene in Build Settings.", this);
-                return;
-            }
-            transition = StartCoroutine(EnterSeasons());
+            ReturnToSeasons();
             return;
         }
         if (!IsPresenting) return;
@@ -207,7 +272,8 @@ public class ObservatoryTour : MonoBehaviour
         else if (CurrentStep == TourStep.Sky) transition = StartCoroutine(ChangeView(false));
         else if (CurrentStep == TourStep.Earth)
         {
-            if (modelDisplay.IsSpaceView) transition = StartCoroutine(FinishFromSpace());
+            if (fromSeasons) ReturnToSeasons();
+            else if (modelDisplay.IsSpaceView) transition = StartCoroutine(FinishFromSpace());
             else Finish();
         }
     }
@@ -226,6 +292,11 @@ public class ObservatoryTour : MonoBehaviour
         }
         if (!IsPresenting || IsTransitioning || CurrentStep == TourStep.Introduction) return;
         IsPaused = !IsPaused;
+        if (fromSeasons)
+        {
+            if (!IsPaused) holdUntil = Time.unscaledTime;
+            ShowCaption(IsPaused ? "Time is paused." : "Time is playing.", 3f);
+        }
         RefreshClock();
     }
 
@@ -239,7 +310,19 @@ public class ObservatoryTour : MonoBehaviour
     {
         if (!CanChangeSunPath()) return;
         sunPath.TogglePath();
-        ShowCaption(sunPath.IsPathVisible ? "Gold: the Sun's daily path." : "Sun path hidden.", 6f);
+        ShowCaption(sunPath.IsPathVisible ? VisibleSunPathCaption() : "Sun path hidden.", 6f);
+    }
+
+    string VisibleSunPathCaption()
+    {
+        if (modelDisplay.IsSpaceView) return "Path on the monitor.";
+        return HasHighSunPath() ? "Gold path: look up." : "Gold: the Sun's daily path.";
+    }
+
+    bool HasHighSunPath()
+    {
+        double noonElevation = 90.0 - Math.Abs(EarthObservationModel.LatitudeDegrees - observation.SolarDeclinationDegrees);
+        return noonElevation >= LookUpElevation;
     }
 
     public void ToggleTerrain()
@@ -372,6 +455,11 @@ public class ObservatoryTour : MonoBehaviour
             return;
         }
         if (IsTransitioning || welcome.IsShowing) return;
+        if (fromSeasons && IsPresenting)
+        {
+            ReturnToSeasons();
+            return;
+        }
         if (CurrentStep == TourStep.Complete) { hasResume = false; StartGuidedTour(); }
         else if (!IsPresenting) return;
         else if (CurrentStep == TourStep.Introduction) return;
@@ -431,6 +519,19 @@ public class ObservatoryTour : MonoBehaviour
         PlayLine(nextLine);
     }
 
+    void ReturnToSeasons()
+    {
+        if (string.IsNullOrWhiteSpace(seasonsScene) || !Application.CanStreamedLevelBeLoaded(seasonsScene))
+        {
+            ShowCaption("Seasons is unavailable.", 8f);
+            if (!fromSeasons) hint.text = "A: retry seasons   B: watch again";
+            controls.ResetInput();
+            Debug.LogWarning("[ObservatoryTour] Enable the Seasons scene in Build Settings.", this);
+            return;
+        }
+        transition = StartCoroutine(EnterSeasons());
+    }
+
     IEnumerator EnterSeasons()
     {
         if (voice != null) voice.Stop();
@@ -446,21 +547,14 @@ public class ObservatoryTour : MonoBehaviour
         welcome.locomotion.Restore();
         yield return null;
 
-        AsyncOperation load = null;
-        try
-        {
-            load = SceneManager.LoadSceneAsync(seasonsScene, LoadSceneMode.Single);
-        }
-        catch (Exception error)
-        {
-            Debug.LogWarning("[ObservatoryTour] Could not load Seasons: " + error.Message, this);
-        }
+        AsyncOperation load = SeasonsVisit.EnterSeasons(seasonsScene, observation.SimulationDays);
         if (load == null)
         {
-            welcome.PauseLocomotion(true);
+            welcome.PauseLocomotion(!modelDisplay.IsSpaceView);
+            observation.SetSuspended(!IsPresenting);
             ClearFade();
-            ShowCaption("Seasons could not open. Try again or replay this lesson.", float.PositiveInfinity);
-            hint.text = "A: retry seasons   B: watch again";
+            ShowCaption("Seasons could not open. Try again.", 8f);
+            if (!fromSeasons) hint.text = "A: retry seasons   B: watch again";
             controls.ResetInput();
             transition = null;
             yield break;
@@ -552,8 +646,10 @@ public class ObservatoryTour : MonoBehaviour
 
     void RefreshClock()
     {
-        int minutes = (int)Math.Floor(observation.SolarTimeHours * 60.0) % 1440;
-        clock.text = (minutes / 60).ToString("00") + ":" + (minutes % 60).ToString("00") +
+        int minutes = fromSeasons ? SeasonsCalendar.SolarClockMinutes(observation.SolarTimeHours) :
+            (int)Math.Floor(observation.SolarTimeHours * 60.0) % 1440;
+        clock.text = (fromSeasons ? SeasonsCalendar.DateLabel(observation.SimulationDays) + "   " : "") +
+            (minutes / 60).ToString("00") + ":" + (minutes % 60).ToString("00") +
             (IsPresenting ? (IsPaused ? "   X: play" : "   X: pause") : "");
     }
 

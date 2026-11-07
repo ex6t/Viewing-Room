@@ -6,10 +6,20 @@ using UnityEngine.Rendering;
 //the cabin stays still while the scenery follows our teaching altitude
 public sealed class ObservatoryRocketCabin
 {
-    public Color SkyColor { get; private set; }
-
+    //nasa's atmosphere guide gives approximate boundaries and the 100 km convention
+    const float StratosphereMetres = 12000f;
+    const float MesosphereMetres = 50000f;
+    const float ThermosphereMetres = 80000f;
+    internal const float KarmanLineMetres = 100000f;
+    internal const float ArrivalMetres = 600000f;
+    const float earthMeanRadiusMetres = 6371000f;
+    const float earthRadius = 58f * 2.2f;
     readonly Transform root, city, clouds, airplane, earth;
-    readonly Transform atmosphere;
+    readonly MeshRenderer earthSurface;
+    readonly MaterialPropertyBlock earthLighting = new MaterialPropertyBlock();
+    static readonly int sunDirectionId = Shader.PropertyToID("_ModelSunDirection");
+    static readonly int hazeColorId = Shader.PropertyToID("_FlightHazeColor");
+    static readonly int atmosphereId = Shader.PropertyToID("_FlightAtmosphere");
     readonly List<Material> materials = new List<Material>();
     readonly List<Mesh> ownedMeshes = new List<Mesh>();
     readonly Dictionary<PrimitiveType, Mesh> meshes = new Dictionary<PrimitiveType, Mesh>();
@@ -19,7 +29,8 @@ public sealed class ObservatoryRocketCabin
     readonly TMP_Text altitudeText, layerText, controlsText;
     readonly RectTransform altitudeMarker;
 
-    public ObservatoryRocketCabin(Transform parent, int layer, Material surfaceMaterial, TMP_FontAsset font)
+    public ObservatoryRocketCabin(Transform parent, int layer, Material surfaceMaterial, TMP_FontAsset font,
+        Mesh earthMesh, Material earthMaterial)
     {
         this.layer = layer;
         surface = surfaceMaterial;
@@ -63,13 +74,13 @@ public sealed class ObservatoryRocketCabin
         Text(panel, "ROCKET ASCENT", new Vector2(-115f, 85f), new Vector2(790f, 36f), 24f, Color.white);
         altitudeText = Text(panel, "0 m", new Vector2(-115f, 30f), new Vector2(790f, 67f), 48f, new Color(0.35f, 1f, 0.98f));
         layerText = Text(panel, "Troposphere", new Vector2(-115f, -25f), new Vector2(790f, 40f), 23f, Color.white);
-        controlsText = Text(panel, "X: pause   B: cancel", new Vector2(-115f, -73f), new Vector2(790f, 34f), 21f, new Color(0.72f, 0.83f, 0.88f));
+        controlsText = Text(panel, "X: pause   A/Enter: skip   B: cancel", new Vector2(-115f, -73f), new Vector2(790f, 34f), 21f, new Color(0.72f, 0.83f, 0.88f));
         Image(panel, "Altitude line", new Vector2(360f, 0f), new Vector2(3f, 180f), new Color(0.43f, 0.62f, 0.70f));
-        for (int tick = 0; tick <= 4; tick++)
+        for (int tick = 0; tick <= 6; tick++)
         {
-            float y = -90f + tick * 45f;
+            float y = -90f + tick * 30f;
             Image(panel, "Altitude tick", new Vector2(369f, y), new Vector2(20f, 2f), Color.white);
-            Text(panel, (tick * 25).ToString() + (tick == 4 ? " km" : ""), new Vector2(432f, y), new Vector2(92f, 27f), 19f, Color.white);
+            Text(panel, (tick * 100).ToString() + (tick == 6 ? " km" : ""), new Vector2(432f, y), new Vector2(92f, 27f), 19f, Color.white);
         }
         altitudeMarker = Image(panel, "Altitude marker", new Vector2(345f, -90f), new Vector2(34f, 8f), new Color(0.35f, 1f, 0.98f));
         Text(root, "Time-compressed ascent / approximate layer boundaries", new Vector3(0f, 0.89f, 1.65f), new Vector2(1150f, 36f), 19f, 0.00165f);
@@ -92,41 +103,123 @@ public sealed class ObservatoryRocketCabin
         Box("Aircraft tail", airplane, new Vector3(-2.15f, 0.56f, 0f), new Vector3(0.8f, 1.1f, 0.10f), plane);
 
         earth = Group("Upper atmosphere horizon", root);
-        Material ocean = Tint("Earth ocean", new Color(0.04f, 0.27f, 0.43f));
-        Material rim = Tint("Atmosphere rim", new Color(0.31f, 0.72f, 0.92f));
-        atmosphere = Piece("Atmosphere", earth, PrimitiveType.Sphere, new Vector3(0f, -112f, 105f), Vector3.one * 219f, rim);
-        Piece("Curved Earth", earth, PrimitiveType.Sphere, new Vector3(0f, -112f, 90f), Vector3.one * 210f, ocean);
-        Material land = Tint("Earth land", new Color(0.22f, 0.39f, 0.28f));
-        LandPatch("Distant coastline", new Vector2(-22f, 75f), new Vector2(17f, 12f), land);
-        LandPatch("Distant land", new Vector2(22f, 80f), new Vector2(14f, 10f), land);
+        earth.localScale = Vector3.one * earthRadius;
+        //reuse the globe without copying its orbit scripts or California pointer
+        Mesh flightMesh = RefineFlightEarth(earthMesh);
+        float meshScale = 1f / Mathf.Max(0.001f, flightMesh.bounds.extents.x);
+        earthSurface = MeshPiece("Flight Earth", earth, flightMesh, -flightMesh.bounds.center * meshScale,
+            Vector3.one * meshScale, earthMaterial).GetComponent<MeshRenderer>();
         SetAltitude(0f);
+    }
+
+    public void SetEarthView(Vector3 california, Vector3 north)
+    {
+        //frame the California side of the curved horizon with daylight on the visible surface
+        Quaternion windowView = Quaternion.LookRotation(new Vector3(0.03f, 0.92f, -0.39f), Vector3.up);
+        earth.localRotation = windowView * Quaternion.Inverse(Quaternion.LookRotation(california, north));
+        var sunlight = root.TransformDirection(new Vector3(-0.45f, 0.72f, -0.53f).normalized);
+        earthLighting.SetVector(sunDirectionId, sunlight);
+        earthSurface.SetPropertyBlock(earthLighting);
     }
 
     public void SetAltitude(float altitudeMeters)
     {
-        float altitude = Mathf.Clamp(altitudeMeters, 0f, 100000f);
+        float altitude = Mathf.Clamp(altitudeMeters, 0f, ArrivalMetres);
         float lower = Mathf.Clamp01(altitude / 3000f);
         city.localScale = Vector3.one * Mathf.Lerp(1f, 0.16f, lower);
         city.localPosition = new Vector3(0f, -Mathf.Lerp(0f, 35f, lower), Mathf.Lerp(0f, 16f, lower));
-        city.gameObject.SetActive(altitude < 24000f);
-        clouds.localPosition = new Vector3(0f, Mathf.Lerp(18f, -23f, Mathf.Clamp01(altitude / 17000f)), 0f);
-        clouds.gameObject.SetActive(altitude < 28000f);
-        float passing = Mathf.Clamp01((altitude - 2500f) / 14000f);
-        airplane.localPosition = new Vector3(Mathf.Lerp(-23f, 24f, passing), Mathf.Lerp(12f, -9f, passing), 35f);
-        airplane.gameObject.SetActive(altitude > 2500f && altitude < 19000f);
-        float upper = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(12000f, 47000f, altitude));
-        earth.localPosition = new Vector3(0f, Mathf.Lerp(-90f, 0f, upper), 0f);
-        atmosphere.localScale = Vector3.one * Mathf.Lerp(219f, 212f, Mathf.Clamp01(altitude / 100000f));
-        SkyColor = Color.Lerp(new Color(0.29f, 0.61f, 0.84f), new Color(0.003f, 0.008f, 0.025f), Mathf.SmoothStep(0f, 1f, altitude / 75000f));
-        altitudeText.text = altitude < 1000f ? altitude.ToString("0") + " m" : (altitude / 1000f).ToString("0.0") + " km";
-        layerText.text = altitude >= 100000f ? "Edge of space / 100 km" : altitude >= 85000f ? "Thermosphere" :
-            altitude >= 50000f ? "Mesosphere" : altitude >= 12000f ? "Stratosphere" : "Troposphere";
-        altitudeMarker.anchoredPosition = new Vector2(345f, -90f + altitude / 100000f * 180f);
+        city.gameObject.SetActive(altitude < StratosphereMetres);
+        float cloudY = Mathf.Lerp(18f, -36f, Mathf.Clamp01(altitude / 14000f));
+        clouds.localPosition = new Vector3(0f, cloudY, 0f);
+        clouds.gameObject.SetActive(altitude < 14000f);
+        float passing = Mathf.InverseLerp(2500f, 15500f, altitude);
+        airplane.localPosition = new Vector3(Mathf.Lerp(-43f, 43f, passing), Mathf.Lerp(12f, -9f, passing), 35f);
+        airplane.gameObject.SetActive(altitude > 2500f && altitude < 15500f);
+        earth.gameObject.SetActive(altitude > KarmanLineMetres);
+        if (earth.gameObject.activeSelf)
+        {
+            //bring the nearby horizon in from below the window as the view turns back toward Earth
+            float distance = earthRadius * (1f + altitude / earthMeanRadiusMetres);
+            float angularRadius = Mathf.Asin(earthRadius / distance);
+            float limb = Mathf.Lerp(-17f, -2f, AltitudeBlend(KarmanLineMetres, 190000f, altitude)) * Mathf.Deg2Rad;
+            float elevation = limb - angularRadius;
+            earth.localPosition = new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * distance;
+            earthLighting.SetColor(hazeColorId, new Color(0.10f, 0.24f, 0.46f));
+            earthLighting.SetFloat(atmosphereId, Mathf.Lerp(0.6f, 0.28f, AltitudeBlend(KarmanLineMetres, ArrivalMetres, altitude)));
+            earthSurface.SetPropertyBlock(earthLighting);
+        }
+        altitudeText.text = altitude < 1000f ? Mathf.FloorToInt(altitude) + " m" :
+            (Mathf.Floor(altitude / 100f) / 10f).ToString("0.0") + " km";
+        layerText.text = altitude >= KarmanLineMetres ? "Thermosphere / Kármán line crossed" :
+            altitude >= ThermosphereMetres ? "Thermosphere" : altitude >= MesosphereMetres ? "Mesosphere" :
+            altitude >= StratosphereMetres ? "Stratosphere" : "Troposphere";
+        altitudeMarker.anchoredPosition = new Vector2(345f, -90f + altitude / ArrivalMetres * 180f);
     }
 
     public void SetPaused(bool value)
     {
-        controlsText.text = value ? "PAUSED   X: resume   B: cancel" : "X: pause   B: cancel";
+        controlsText.text = value ? "PAUSED   X: resume   A/Enter: skip   B: cancel" : "X: pause   A/Enter: skip   B: cancel";
+    }
+
+    static float AltitudeBlend(float start, float end, float altitude)
+    {
+        return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(start, end, altitude));
+    }
+
+    Mesh RefineFlightEarth(Mesh source)
+    {
+        //add surface detail for the close horizon while keeping the original texture mapping
+        if (!source.isReadable || source.subMeshCount != 1) return source;
+        Vector3[] original = source.vertices;
+        Vector2[] originalUV = source.uv;
+        int[] originalIndices = source.triangles;
+        if (originalUV.Length != original.Length || originalIndices.Length == 0) return source;
+
+        const int divisions = 3;
+        const int verticesPerTriangle = (divisions + 1) * (divisions + 2) / 2;
+        int vertexCount = originalIndices.Length / 3 * verticesPerTriangle;
+        Vector3 center = source.bounds.center;
+        float radius = source.bounds.extents.x;
+        var vertices = new List<Vector3>(vertexCount);
+        var normals = new List<Vector3>(vertexCount);
+        var uv = new List<Vector2>(vertexCount);
+        var indices = new List<int>(originalIndices.Length * divisions * divisions);
+        for (int triangle = 0; triangle < originalIndices.Length; triangle += 3)
+        {
+            int a = originalIndices[triangle], b = originalIndices[triangle + 1], c = originalIndices[triangle + 2];
+            int rowStart = vertices.Count;
+            for (int row = 0; row <= divisions; row++)
+            {
+                int width = divisions - row + 1;
+                for (int column = 0; column < width; column++)
+                {
+                    float wb = row / (float)divisions, wc = column / (float)divisions, wa = 1f - wb - wc;
+                    Vector3 direction = (original[a] * wa + original[b] * wb + original[c] * wc - center).normalized;
+                    vertices.Add(center + direction * radius);
+                    normals.Add(direction);
+                    uv.Add(originalUV[a] * wa + originalUV[b] * wb + originalUV[c] * wc);
+                    int i = rowStart + column;
+                    if (column + 1 >= width) continue;
+                    indices.Add(i);
+                    indices.Add(i + width);
+                    indices.Add(i + 1);
+                    if (column + 2 >= width) continue;
+                    indices.Add(i + width);
+                    indices.Add(i + width + 1);
+                    indices.Add(i + 1);
+                }
+                rowStart += width;
+            }
+        }
+
+        var mesh = new Mesh { name = "Flight Earth close horizon" };
+        if (vertexCount > 65535) mesh.indexFormat = IndexFormat.UInt32;
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uv);
+        mesh.SetTriangles(indices, 0);
+        ownedMeshes.Add(mesh);
+        return mesh;
     }
 
     public void Dispose()
@@ -253,45 +346,6 @@ public sealed class ObservatoryRocketCabin
         for (int i = 0; i < faces.Length; i++) mesh.SetTriangles(faces[i], i);
         ownedMeshes.Add(mesh);
         return mesh;
-    }
-
-    void LandPatch(string name, Vector2 center, Vector2 size, Material material)
-    {
-        //these small patches follow the ocean sphere instead of floating above it
-        const int segments = 12, rings = 4;
-        var vertices = new Vector3[1 + segments * rings];
-        var triangles = new List<int>();
-        vertices[0] = LandPoint(center.x, center.y);
-        for (int ring = 1; ring <= rings; ring++)
-            for (int i = 0; i < segments; i++)
-            {
-                float angle = i * 2f * Mathf.PI / segments;
-                float coastline = 0.85f + 0.15f * Mathf.Sin(angle * 3f + center.x);
-                float fraction = ring / (float)rings * coastline;
-                int current = 1 + (ring - 1) * segments + i;
-                int next = 1 + (ring - 1) * segments + (i + 1) % segments;
-                vertices[current] = LandPoint(center.x + Mathf.Cos(angle) * size.x * fraction,
-                    center.y + Mathf.Sin(angle) * size.y * fraction);
-                if (ring == 1) triangles.AddRange(new[] { 0, next, current });
-                else
-                {
-                    int inner = current - segments, innerNext = next - segments;
-                    triangles.AddRange(new[] { inner, next, current, inner, innerNext, next });
-                }
-            }
-        var mesh = new Mesh { name = name };
-        mesh.vertices = vertices;
-        mesh.SetTriangles(triangles, 0);
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        ownedMeshes.Add(mesh);
-        MeshPiece(name, earth, mesh, Vector3.zero, Vector3.one, material);
-    }
-
-    static Vector3 LandPoint(float x, float z)
-    {
-        const float radius = 105.35f;
-        return new Vector3(x, -112f + Mathf.Sqrt(radius * radius - x * x - (z - 90f) * (z - 90f)), z);
     }
 
     TMP_Text Text(Transform parent, string value, Vector2 position, Vector2 size, float fontSize, Color color)
